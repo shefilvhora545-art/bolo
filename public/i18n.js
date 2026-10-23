@@ -74,6 +74,10 @@ const STRINGS = {
     blockedHelp: "Blocked – allow it in Chrome: tap 🔒 next to the address → Permissions.",
     installHelp: "In Chrome tap ⋮ (menu) → “Add to Home screen” / “Install app”.",
     reminderTitle: "⏰ Partner reminder", scheduledTitle: "💬 Time to send your message",
+    pickSome: "Choose contacts", pickAll: "All contacts", importAll: "📂 Import all contacts (.vcf)",
+    pickerTip: "Tip: tick the people you need – or “Select all” at the top if your phone shows it.",
+    vcfHelp: "To add all contacts: Contacts app → ⋮ → Export (.vcf file), then choose that file here.",
+    importedNone: "No new contacts found in that file.",
   },
 
   gu: {
@@ -147,6 +151,10 @@ const STRINGS = {
     blockedHelp: "બંધ છે – Chrome માં સરનામાં પાસે 🔒 દબાવો → Permissions માં ચાલુ કરો.",
     installHelp: "Chrome માં ⋮ (મેનુ) → “Add to Home screen” / “Install app” દબાવો.",
     reminderTitle: "⏰ પાર્ટનર રિમાઇન્ડર", scheduledTitle: "💬 મેસેજ મોકલવાનો સમય થયો",
+    pickSome: "સંપર્કો પસંદ કરો", pickAll: "બધા સંપર્કો", importAll: "📂 બધા સંપર્કો ઉમેરો (.vcf)",
+    pickerTip: "ટીપ: જરૂરી લોકો પર ટિક કરો – અથવા ઉપર “Select all” દેખાય તો તે દબાવો.",
+    vcfHelp: "બધા સંપર્કો માટે: Contacts એપ → ⋮ → Export (.vcf ફાઇલ), પછી તે ફાઇલ અહીં પસંદ કરો.",
+    importedNone: "આ ફાઇલમાં કોઈ નવો સંપર્ક મળ્યો નહીં.",
   },
 
   hi: {
@@ -220,6 +228,10 @@ const STRINGS = {
     blockedHelp: "बंद है – Chrome में पते के पास 🔒 दबाएं → Permissions में चालू करें।",
     installHelp: "Chrome में ⋮ (मेनू) → “Add to Home screen” / “Install app” दबाएं।",
     reminderTitle: "⏰ पार्टनर रिमाइंडर", scheduledTitle: "💬 मैसेज भेजने का समय हो गया",
+    pickSome: "संपर्क चुनें", pickAll: "सभी संपर्क", importAll: "📂 सभी संपर्क जोड़ें (.vcf)",
+    pickerTip: "टिप: ज़रूरी लोगों पर टिक करें – या ऊपर “Select all” दिखे तो उसे दबाएं।",
+    vcfHelp: "सभी संपर्कों के लिए: Contacts ऐप → ⋮ → Export (.vcf फ़ाइल), फिर वह फ़ाइल यहाँ चुनें।",
+    importedNone: "इस फ़ाइल में कोई नया संपर्क नहीं मिला।",
   },
 };
 

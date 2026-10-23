@@ -113,6 +113,8 @@
       <div class="row">
         <button id="openSetup" class="ghost" data-i18n="openSetup">⚙️ Permissions & setup</button>
         <button id="importPhone" class="primary" data-i18n="importPhone">📱 Import from phone contacts</button>
+        <button id="importAll" class="ghost" data-i18n="importAll">📂 Import all contacts (.vcf)</button>
+        <input type="file" id="vcfFile" accept=".vcf,text/vcard,text/x-vcard" hidden>
         <button id="resetDemo" class="ghost" data-i18n="loadDemo">↺ Load demo contacts</button>
         <button id="closeFamily" class="primary" data-i18n="done">Done</button>
       </div>
@@ -134,7 +136,7 @@
       </div>
       <div class="perm" id="permMic"><span class="pi">🎤</span><div><b data-i18n="pMic">Microphone</b><small data-i18n="pMicHelp">So Partner can hear you – always listening for “Partner” while open</small></div><button class="primary" data-i18n="allow">Allow</button></div>
       <div class="perm" id="permNotif"><span class="pi">🔔</span><div><b data-i18n="pNotif">Notifications</b><small data-i18n="pNotifHelp">Reminders and midnight birthday wishes, even when the screen is busy</small></div><button class="primary" data-i18n="allow">Allow</button></div>
-      <div class="perm" id="permContacts"><span class="pi">📱</span><div><b data-i18n="pContacts">Contacts</b><small data-i18n="pContactsHelp">Pick your family from the phone's contacts (Mummy, Ammi, Bhai…)</small></div><button class="primary" data-i18n="allow">Allow</button></div>
+      <div class="perm" id="permContacts"><span class="pi">📱</span><div><b data-i18n="pContacts">Contacts</b><small data-i18n="pContactsHelp">Pick your family from the phone's contacts (Mummy, Ammi, Bhai…)</small></div><div class="perm-btns"><button class="primary" id="pickSome" data-i18n="pickSome">Choose contacts</button><button class="ghost" id="pickAll" data-i18n="pickAll">All contacts</button></div></div>
       <div class="perm" id="permLocation"><span class="pi">📍</span><div><b data-i18n="pLocation">Location</b><small data-i18n="pLocationHelp">Only sent to your family when you press SOS</small></div><button class="primary" data-i18n="allow">Allow</button></div>
       <div class="perm" id="permInstall"><span class="pi">📲</span><div><b data-i18n="pInstall">Install Partner app</b><small data-i18n="pInstallHelp">Icon on your home screen – long-press it for Talk and SOS shortcuts</small></div><button class="primary" data-i18n="install">Install</button></div>
       <button id="setupDone" class="big" data-i18n="startUsing">Start using Partner</button>

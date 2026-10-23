@@ -734,28 +734,62 @@ const RELATION_FROM_NAME = [
   [/\b(dada|nana|grandpa)\b/i, "grandfather"],
   [/\b(dadi|nani|grandma)\b/i, "grandmother"],
 ];
-$("importPhone").onclick = async () => {
-  if (!("contacts" in navigator && "select" in navigator.contacts)) {
-    toast(tr("importNeedsChrome"));
-    return;
+// Adds people ({ name, phone, email }) to Family, skipping numbers that are already saved.
+function addContacts(people) {
+  let added = 0;
+  for (const p of people) {
+    if (!p.name || !p.phone) continue;
+    const digits = p.phone.replace(/\D/g, "").slice(-10);
+    if (state.contacts.some((c) => c.phone.replace(/\D/g, "").slice(-10) === digits)) continue;
+    const relation = (RELATION_FROM_NAME.find(([re]) => re.test(p.name)) || [, ""])[1];
+    state.contacts.push({ id: "c" + Date.now() + "_" + added, name: p.name, relation, city: "", phone: p.phone, email: p.email || "", birthday: "", emergency: false });
+    added++;
   }
+  save("bolo.contacts", state.contacts);
+  renderFamily();
+  renderSetup();
+  return added;
+}
+
+// "Choose contacts": the phone's own picker (Chrome on Android) - the user ticks only the people needed.
+$("importPhone").onclick = async () => {
+  if (!("contacts" in navigator && "select" in navigator.contacts)) { toast(tr("importNeedsChrome")); return; }
+  toast(tr("pickerTip"));
   try {
     const picked = await navigator.contacts.select(["name", "tel", "email"], { multiple: true });
-    let added = 0;
-    for (const p of picked) {
-      const name = (p.name && p.name[0]) || "";
-      const phone = (p.tel && p.tel[0]) || "";
-      if (!name || !phone) continue;
-      const digits = phone.replace(/\D/g, "").slice(-10);
-      if (state.contacts.some((c) => c.phone.replace(/\D/g, "").slice(-10) === digits)) continue;
-      const relation = (RELATION_FROM_NAME.find(([re]) => re.test(name)) || [, ""])[1];
-      state.contacts.push({ id: "c" + Date.now() + added, name, relation, city: "", phone, email: (p.email && p.email[0]) || "", birthday: "", emergency: false });
-      added++;
-    }
-    save("bolo.contacts", state.contacts);
-    renderFamily();
+    const added = addContacts(picked.map((p) => ({ name: (p.name && p.name[0]) || "", phone: (p.tel && p.tel[0]) || "", email: (p.email && p.email[0]) || "" })));
     toast(tr("imported", { n: added }));
   } catch { toast(tr("importCancelled")); }
+};
+
+// "All contacts": a .vcf file exported from the phone's Contacts app (works on Android, iPhone and PC).
+function decodeQuotedPrintable(s) {
+  const bytes = [];
+  s.replace(/=\r?\n/g, "").replace(/=([0-9A-F]{2})|([^=])/gi, (_, hex, ch) => {
+    if (hex) bytes.push(parseInt(hex, 16)); else for (const b of new TextEncoder().encode(ch)) bytes.push(b);
+    return "";
+  });
+  return new TextDecoder().decode(new Uint8Array(bytes));
+}
+function parseVcf(text) {
+  const unfolded = text.replace(/\r?\n[ \t]/g, ""); // vCard folds long lines
+  return unfolded.split(/BEGIN:VCARD/i).slice(1).map((card) => {
+    const field = (name) => {
+      const m = new RegExp("^" + name + "([^:\\n]*):(.*)$", "mi").exec(card);
+      if (!m) return "";
+      return /QUOTED-PRINTABLE/i.test(m[1]) ? decodeQuotedPrintable(m[2]).trim() : m[2].trim();
+    };
+    const n = field("N").split(";").filter(Boolean).reverse().join(" ");
+    return { name: field("FN") || n, phone: field("TEL"), email: field("EMAIL") };
+  });
+}
+$("importAll").onclick = () => { toast(tr("vcfHelp")); $("vcfFile").click(); };
+$("vcfFile").onchange = async (e) => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (!file) return;
+  const added = addContacts(parseVcf(await file.text()));
+  toast(added ? tr("imported", { n: added }) : tr("importedNone"));
 };
 $("resetDemo").onclick = () => { state.contacts = structuredClone(DEMO_CONTACTS); save("bolo.contacts", state.contacts); renderFamily(); };
 
@@ -798,6 +832,7 @@ function markPerm(id, status) { // status: "ok" | "no" | ""
   const row = $(id), btn = row.querySelector("button");
   row.classList.toggle("ok", status === "ok");
   row.classList.toggle("no", status === "no");
+  if (id === "permContacts") { btn.textContent = status === "ok" ? tr("allowed") : tr("pickSome"); return; }
   const isInstall = id === "permInstall";
   btn.textContent = status === "ok" ? tr(isInstall ? "installed" : "allowed") : status === "no" ? tr("denied") : tr(isInstall ? "install" : "allow");
 }
@@ -833,10 +868,11 @@ $("permNotif").querySelector("button").onclick = async () => {
   if (r === "granted") notify(tr("reminderTitle"), tr("allowed")); else if (r === "denied") toast(tr("blockedHelp"));
   renderSetup();
 };
-$("permContacts").querySelector("button").onclick = async () => {
+$("pickSome").onclick = async () => {
   if ("contacts" in navigator && "select" in navigator.contacts) { await $("importPhone").onclick(); renderSetup(); }
   else { $("setup").classList.add("hidden"); renderFamily(); $("family").classList.remove("hidden"); toast(tr("importNeedsChrome")); }
 };
+$("pickAll").onclick = () => $("importAll").onclick();
 $("permLocation").querySelector("button").onclick = () => {
   if (!navigator.geolocation) { toast(tr("blockedHelp")); return; }
   navigator.geolocation.getCurrentPosition(() => renderSetup(), () => { toast(tr("blockedHelp")); renderSetup(); }, { timeout: 10000 });
