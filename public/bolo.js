@@ -99,6 +99,7 @@ function renderLang() {
   document.documentElement.dir = /^(ur|ar)/.test(state.lang) ? "rtl" : "ltr";
   if (statusProvider !== null) showStatus();
   renderNight();
+  if (!$("features").classList.contains("hidden")) renderFeatures();
 }
 
 // Switch the whole screen to a language (AI-translated once for languages beyond gu/hi/en).
@@ -232,6 +233,12 @@ async function handleUtterance(text) {
     const pending = state.pending;
     const said = text.trim().replace(/^["“]|["”.!?,]$/g, "");
     const short = said.split(/\s+/).length <= 3; // "ha", "no", "yes please" - anything longer may be a correction
+    if (pending.kind === "photo" && short && (YES.test(said) || NO.test(said))) {
+      state.pending = null;
+      if (YES.test(said)) await sendPhotoAfterYes(pending.to);
+      else { $("camShare").classList.add("hidden"); speak(tr("camKept"), state.lang); }
+      return;
+    }
     if (pending.kind === "scheduled" && short && (YES.test(said) || NO.test(said))) {
       state.pending = null;
       if (YES.test(said)) {
@@ -663,9 +670,19 @@ async function openCamera(facing, timer, shareTo = camShareTo) {
   ["camShare", "camAgain"].forEach((id) => $(id).classList.remove("hidden"));
   $("camShare").textContent = camShareTo ? tr("camSendTo", { who: camShareTo.who }) : tr("camShare");
   $("camShare").classList.toggle("yes", !!camShareTo);
-  // On this PC: send the photo to the person's WhatsApp by itself (zero taps).
-  if (camShareTo && pcHelper && (await pcSendPhoto(camShareTo))) return;
-  speak(camShareTo ? tr("camAskSend", { who: camShareTo.who }) : tr("camDone"), state.lang);
+  if (!camShareTo) { speak(tr("camDone"), state.lang); return; }
+  // Ask permission by voice before sending: "Shall I send this photo to Shad on WhatsApp? Say yes or no."
+  state.pending = { kind: "photo", to: camShareTo };
+  speak(tr("camAskPhoto", { who: camShareTo.who }), state.lang).then(() => { if (state.pending?.kind === "photo") listen(); });
+}
+async function sendPhotoAfterYes(to) {
+  if (pcHelper && (await pcSendPhoto(to))) return; // this PC: zero taps
+  const file = new File([camBlob], "Partner-photo.jpg", { type: "image/jpeg" });
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file] }); return; }
+  } catch { /* the phone wants a real tap first */ }
+  $("camShare").classList.add("pulse");
+  speak(tr("camTapToSend"), state.lang);
 }
 async function pcSendPhoto(to) {
   speak(tr("camSendingPc", { who: to.who }), state.lang);
@@ -677,11 +694,14 @@ async function pcSendPhoto(to) {
   $("camShare").classList.add("hidden");
   return true;
 }
-$("camClose").onclick = () => { stopCamera(); $("cam").classList.add("hidden"); speechSynthesis.cancel(); startHandsFree(); };
+$("camClose").onclick = () => { if (state.pending?.kind === "photo") state.pending = null; stopCamera(); $("cam").classList.add("hidden"); speechSynthesis.cancel(); startHandsFree(); };
 $("camAgain").onclick = () => openCamera(camFacing, camTimer);
 // One tap: the phone's share screen with the photo attached (WhatsApp → the person, usually at the top).
 // On a PC: the photo is copied and the person's WhatsApp chat opens - press Ctrl+V and Enter.
 $("camShare").onclick = async () => {
+  if (state.pending?.kind === "photo") state.pending = null;
+  $("camShare").classList.remove("pulse");
+  if (camShareTo && pcHelper && (await pcSendPhoto(camShareTo))) return;
   const file = new File([camBlob], "Partner-photo.jpg", { type: "image/jpeg" });
   const canShareFiles = navigator.canShare && navigator.canShare({ files: [file] }) && /android|iphone|ipad/i.test(navigator.userAgent);
   if (canShareFiles) {
@@ -1067,10 +1087,33 @@ document.querySelectorAll("[data-setlang]").forEach((b) => (b.onclick = async ()
 $("setupDone").onclick = () => {
   save("bolo.setupDone", true);
   $("setup").classList.add("hidden");
+  showTab("home");
   if (handsFree) { startHandsFree(); speak(tr("hfHint"), state.lang); }
 };
 $("openSetup").onclick = openSetup;
-$("settingsBtn").onclick = (e) => { e.stopPropagation(); openSetup(); };
+$("settingsBtn").onclick = (e) => { e.stopPropagation(); showTab("settings"); $("features").classList.add("hidden"); openSetup(); };
+
+// ---------- Features page and bottom navigation ----------
+const FEATURE_ICONS = ["📞", "💬", "🎂", "⏰", "📸", "▶️", "🛡️", "🆘", "🌐", "💻"];
+function renderFeatures() {
+  $("featureList").innerHTML = "";
+  FEATURE_ICONS.forEach((icon, i) => {
+    const n = i + 1;
+    const card = el(`<div class="fcard"><h3><span>${icon}</span>${esc(tr("f" + n + "t"))}</h3><p>${esc(tr("f" + n + "d"))}</p><button>${esc(tr("tryIt", { x: tr("f" + n + "e") }))}</button></div>`);
+    card.querySelector("button").onclick = () => { showTab("home"); handleUtterance(tr("f" + n + "e")); };
+    $("featureList").appendChild(card);
+  });
+}
+function showTab(name) {
+  $("features").classList.toggle("hidden", name !== "features");
+  if (name === "features") renderFeatures();
+  if (name === "home") ["setup", "family"].forEach((id) => $(id).classList.add("hidden"));
+  ["tabHome", "tabFeatures", "settingsBtn"].forEach((id) => $(id).classList.remove("on"));
+  $({ home: "tabHome", features: "tabFeatures", settings: "settingsBtn" }[name]).classList.add("on");
+}
+$("tabHome").onclick = () => showTab("home");
+$("tabFeatures").onclick = () => showTab("features");
+$("featuresBack").onclick = () => showTab("home");
 
 // ---------- wiring ----------
 $("stage").addEventListener("click", (e) => {
