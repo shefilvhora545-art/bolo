@@ -1,4 +1,4 @@
-// Bolo front end: listens, sends the sentence to /api/agent, speaks the reply and runs the phone action.
+// Saathi front end: listens, sends the sentence to /api/agent, speaks the reply and runs the phone action.
 "use strict";
 
 const $ = (id) => document.getElementById(id);
@@ -59,7 +59,7 @@ function localIso(d = new Date()) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
-// First visit: use the phone's own language if Bolo has it, otherwise English.
+// First visit: use the phone's own language if Saathi has it, otherwise English.
 function defaultLang() {
   const nav = (navigator.language || "en").toLowerCase();
   if (nav.startsWith("gu")) return "gu-IN";
@@ -132,8 +132,8 @@ function speak(text, lang) {
     lastSpoken = text;
     u.onend = u.onerror = () => {
       setMode("idle");
-      spokeUntil = Date.now() + 800; // ignore the echo of Bolo's own voice for a moment
-      if (handsFree) hfAwake = Date.now() + 10000; // the user can reply without saying "Bolo" again
+      spokeUntil = Date.now() + 800; // ignore the echo of Saathi's own voice for a moment
+      if (handsFree) hfAwake = Date.now() + 10000; // the user can reply without saying "Saathi" again
       resolve();
     };
     speechSynthesis.speak(u);
@@ -174,14 +174,14 @@ function listen() {
   recognizer.start();
 }
 
-// ---------- hands-free: say "Bolo ..." - no tapping at all ----------
+// ---------- hands-free: say "Saathi ..." - no tapping at all ----------
 let handsFree = load("bolo.handsfree", false);
 let hfRec = null, hfAwake = 0, spokeUntil = 0, lastSpoken = "";
-const WAKE = /^(hey |ok |hi |hello )?(bolo|bolo ji|bolu|bholo|બોલો|बोलो)(?=$|[\s,.!?])[\s,.!?]*/i;
+const WAKE = /^(hey |ok |hi |hello |he )?(saathi|sathi|saathee|sathee|saati|sati|saathi ji|સાથી|साथी|ساتھی)(?=$|[\s,.!?])[\s,.!?]*/i;
 const HF_HINTS = {
-  "gu-IN": "“બોલો” કહો અને પછી તમારું કામ કહો",
-  "hi-IN": "“बोलो” कहें और फिर अपना काम बताएं",
-  "en-IN": "Say “Bolo” and then your request",
+  "gu-IN": "“સાથી” કહો અને પછી તમારું કામ કહો",
+  "hi-IN": "“साथी” कहें और फिर अपना काम बताएं",
+  "en-IN": "Say “Saathi” and then your request",
 };
 function renderHandsFree() {
   $("hfBtn").classList.toggle("on", handsFree);
@@ -204,7 +204,7 @@ function startHandsFree() {
     let command = heard;
     if (WAKE.test(command)) command = command.replace(WAKE, "").trim();
     else if (!awake) return;
-    if (!command) { hfAwake = Date.now() + 8000; setMode("listening"); vibrate(60); return; } // just "Bolo": waiting
+    if (!command) { hfAwake = Date.now() + 8000; setMode("listening"); vibrate(60); return; } // just "Saathi": waiting
     hfAwake = 0;
     handleUtterance(command);
   };
@@ -337,7 +337,7 @@ async function handleUtterance(text) {
     result = { ...result, planned_action: result.action, action: "confirm", reply: t(ASK_YES)(who, what, result.schedule_at) };
     $("reply").textContent = result.reply;
   }
-  if (result.learn_note && !state.memory.includes(result.learn_note)) { // Bolo learns the user's choices
+  if (result.learn_note && !state.memory.includes(result.learn_note)) { // Saathi learns the user's choices
     state.memory.push(result.learn_note);
     save("bolo.memory", state.memory);
   }
@@ -347,7 +347,7 @@ async function handleUtterance(text) {
 }
 
 // ---------- WhatsApp sending ----------
-// On the PC (local server) Bolo sends through WhatsApp Desktop by itself; on a phone WhatsApp opens with the text typed.
+// On the PC (local server) Saathi sends through WhatsApp Desktop by itself; on a phone WhatsApp opens with the text typed.
 let pcHelper = false;
 fetch("/api/pc-status").then((r) => r.ok && r.json()).then((d) => (pcHelper = !!(d && d.pc))).catch(() => {});
 
@@ -430,7 +430,7 @@ async function runAction(r) {
     case "reminder": {
       if (/^\d{1,2}:\d{2}$/.test(r.reminder_time)) {
         addReminder(r.reminder_time, r.reminder_text || r.reply);
-        card.appendChild(el(`<div class="card"><h3>⏰ ${esc(r.reminder_time)}</h3><p>${esc(r.reminder_text)}</p><p class="meta">Keep Bolo open on the phone so it can speak the reminder.</p></div>`));
+        card.appendChild(el(`<div class="card"><h3>⏰ ${esc(r.reminder_time)}</h3><p>${esc(r.reminder_text)}</p><p class="meta">Keep Saathi open on the phone so it can speak the reminder.</p></div>`));
       }
       break;
     }
@@ -466,7 +466,7 @@ async function runAction(r) {
       state.scheduled.push({ id: "s" + Date.now(), at: at.getTime(), contact_id: r.contact_id, phone, text: r.message_text, channel: "whatsapp" });
       save("bolo.scheduled", state.scheduled);
       card.appendChild(el(`<div class="card"><h3>⏰ ${esc(at.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }))} → ${esc(label(c) || phone)}</h3>
-        <p>${esc(r.message_text)}</p><p class="meta">🌙 Keep Bolo open and the phone charging. Night mode keeps the screen awake so it fires on time.</p></div>`));
+        <p>${esc(r.message_text)}</p><p class="meta">🌙 Keep Saathi open and the phone charging. Night mode keeps the screen awake so it fires on time.</p></div>`));
       keepAwake();
       break;
     }
@@ -485,9 +485,9 @@ function confirmAction(text, url, danger = false) {
   if (state.verification === "smart" || state.verification === "off") { // 1-step / 2-step always show the tap screen
     if (typeof url === "function") { url(); return; }
     if (/^https?:/.test(url)) {
-      if (window.open(url, "_blank")) return; // WhatsApp in a new tab keeps Bolo (and its timers) alive
+      if (window.open(url, "_blank")) return; // WhatsApp in a new tab keeps Saathi (and its timers) alive
     } else {
-      window.location.href = url; // tel: / sms: / mailto: open the phone app without leaving Bolo
+      window.location.href = url; // tel: / sms: / mailto: open the phone app without leaving Saathi
       setTimeout(() => { if (document.visibilityState === "visible") showTapScreen(text, url, danger); }, 1500);
       return;
     }
@@ -577,7 +577,7 @@ function fireScheduled() {
 }
 setInterval(fireScheduled, 1000);
 
-// At the scheduled time Bolo asks "Ha ke na?". Ha -> send. Na -> delete it and go back to Bolo's home screen.
+// At the scheduled time Saathi asks "Ha ke na?". Ha -> send. Na -> delete it and go back to Saathi's home screen.
 const ASK_SEND = {
   "gu-IN": (who) => `સમય થઈ ગયો. ${who} ને આ મેસેજ મોકલું? હા કે ના?`,
   "hi-IN": (who) => `समय हो गया। ${who} को यह मैसेज भेजूँ? हाँ या ना?`,
@@ -605,7 +605,7 @@ function showNextAsk() {
 }
 function finishAsk() { askQueue.shift(); setTimeout(showNextAsk, 1500); }
 
-// Back to Bolo's clean home screen (a web page cannot open the phone's own home screen).
+// Back to Saathi's clean home screen (a web page cannot open the phone's own home screen).
 function goHome() {
   ["confirm", "family", "readBox"].forEach((id) => $(id).classList.add("hidden"));
   $("card").innerHTML = ""; $("youSaid").textContent = ""; $("reply").textContent = "";
@@ -634,7 +634,7 @@ function birthdayCheck() {
   $("card").appendChild(box);
 }
 
-// ---------- reminders (spoken while Bolo is open) ----------
+// ---------- reminders (spoken while Saathi is open) ----------
 function addReminder(time, text) {
   const [h, m] = time.split(":").map(Number);
   const due = new Date();
@@ -720,7 +720,7 @@ const RELATION_FROM_NAME = [
 ];
 $("importPhone").onclick = async () => {
   if (!("contacts" in navigator && "select" in navigator.contacts)) {
-    toast("Open Bolo in Chrome on an Android phone to import contacts. You can also add them below.");
+    toast("Open Saathi in Chrome on an Android phone to import contacts. You can also add them below.");
     return;
   }
   try {
@@ -800,5 +800,5 @@ fetch("/api/status").then((r) => r.json()).then((d) => {
 birthdayCheck();
 keepAwake();
 
-// Direct link to the family screen: open Bolo with #family
+// Direct link to the family screen: open Saathi with #family
 if (location.hash === "#family") $("btnFamily").click();
