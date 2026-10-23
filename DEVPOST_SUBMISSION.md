@@ -39,7 +39,7 @@ Bolo is a voice-first assistant in **Gujarati, Hindi, English and 18 more langua
 
 ### How I built it
 - **Front end:** vanilla HTML/CSS/JS, designed for no-screen use: the whole screen is one talk button, everything is spoken back (Web Speech API), vibration feedback, and a big "tap anywhere" screen only when the phone requires a tap. An Echo-style light ring shows listening / thinking / speaking.
-- **Brain:** a Vercel serverless function sends the sentence plus the user's contacts, memory, time and safety mode to the AI and gets back **structured JSON** (reply, action, contact, message, schedule time, follow-up task, learned preference). Bolo supports Claude (`claude-opus-5-5` via the Anthropic SDK) as the main model and a free Google Gemini key as an automatic fallback, so it never stops answering. **The live demo currently runs on the free Gemini fallback** because my Claude API credit payment was declined; adding the Claude key switches it over with no code change. I built the whole project with Claude Code as my coding partner.
+- **Brain:** a Vercel serverless function sends the sentence plus the user's contacts, memory, time and safety mode to the AI and gets back **structured JSON** (reply, action, contact, message, schedule time, follow-up task, learned preference). Bolo supports Claude (`claude-opus-5-5` via the Anthropic SDK) as the main model and a free Google Gemini key as an automatic fallback, so it never stops answering. The live demo runs on Claude; if Claude is ever unavailable, the same request automatically goes to Gemini. I built the whole project with Claude Code as my coding partner.
 - **Actions:** `tel:`, WhatsApp, `mailto:`, `sms:` links, an on-device scheduler with Screen Wake Lock for midnight messages, and a local PC helper that sends a confirmed WhatsApp through WhatsApp Desktop by itself.
 - **Privacy:** contacts and memory stay in the user's browser; only the current request goes to the AI.
 
@@ -48,7 +48,7 @@ Bolo is a voice-first assistant in **Gujarati, Hindi, English and 18 more langua
 - Mobile browsers block opening other apps without a fresh tap, so I built a "try automatically, otherwise one full-screen tap" flow.
 - Getting reliable JSON from the free model (it sometimes echoed the schema or repeated the object) – solved with a response schema, validation and model fallback.
 - Vercel auto-detected my browser script as a Node server – fixed with explicit project settings.
-- My API credit card payment was declined, so I designed the provider switch: Claude when available, Gemini otherwise.
+- My first API credit payment looked declined, so I designed a provider switch: Claude when available, Gemini as an automatic fallback.
 
 ### Accomplishments that I'm proud of
 - The *"which Anish kaka?"* moment works in Gujarati, Hindi and English – and Bolo remembers the answer.
@@ -105,6 +105,6 @@ Record on your **phone** (Android screen recorder with **microphone ON**) using 
 | 1:20–1:45 | Hindi: **"रमेश मामा को व्हाट्सएप करो कि मैं 5 बजे आऊंगा"** → "हाँ या ना?" → say **"हाँ"** | "Anything that sends a message waits for a spoken yes – safe for elders." |
 | 1:45–2:10 | 📋 Read a message → paste the fake SBI KYC SMS → Bolo warns FRAUD | "Elders are the main targets of scam SMS. Bolo reads it aloud and warns them." |
 | 2:10–2:30 | Turn on 🎙 Hands-free → say **"Bolo, remind me at 8 to take medicine and call Shad bhai"** | "Hands-free: no tapping at all – and two tasks from one sentence." |
-| 2:30–2:50 | SOS button / closing screen with the GitHub link | "Bolo works in Gujarati, Hindi, English and 18 more languages, and is open source. Bolo – just speak." |
+| 2:30–2:50 | SOS button / closing screen with the GitHub link | "Bolo works in Gujarati, Hindi, English and 18 more languages, is built with Claude, and is open source. Bolo – just speak." |
 
 Upload to **YouTube** (Visibility: **Public** or **Unlisted**, no copyrighted music) and paste the link in Devpost.
