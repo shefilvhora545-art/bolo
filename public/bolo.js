@@ -468,6 +468,11 @@ async function runAction(r) {
       showCode(r);
       break;
     }
+    case "camera": {
+      await speak(r.reply, r.reply_lang);
+      openCamera(r.camera_facing === "front" ? "user" : "environment", Math.max(0, Math.min(10, +r.camera_timer || 3)));
+      return;
+    }
     case "confirm": {
       // Step 2 of verification: show exactly what will happen, then wait for "ha" / "na" (voice or tap).
       state.pending = r;
@@ -573,6 +578,60 @@ function showCode(r) {
   };
   $("card").appendChild(box);
 }
+
+// ---------- camera by voice: open, count down aloud, take the photo, save it ----------
+let camStream = null, camBlob = null, camFacing = "environment", camTimer = 3;
+function stopCamera() { camStream && camStream.getTracks().forEach((tk) => tk.stop()); camStream = null; }
+async function openCamera(facing, timer) {
+  camFacing = facing; camTimer = timer;
+  const video = $("camVideo"), photo = $("camPhoto");
+  photo.classList.add("hidden"); video.classList.remove("hidden");
+  ["camShare", "camAgain"].forEach((id) => $(id).classList.add("hidden"));
+  $("cam").classList.remove("hidden");
+  stopHandsFree(); // the microphone is not needed while the camera is open
+  try {
+    stopCamera();
+    camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: facing }, width: { ideal: 1920 } }, audio: false });
+  } catch {
+    $("cam").classList.add("hidden"); toast(tr("camError")); speak(tr("camError"), state.lang); startHandsFree(); return;
+  }
+  video.srcObject = camStream;
+  video.classList.toggle("mirror", facing === "user"); // a selfie preview looks like a mirror
+  await video.play();
+  for (let n = timer; n > 0; n--) { // spoken countdown: 3... 2... 1...
+    $("camCount").textContent = n;
+    vibrate(80);
+    const num = n.toLocaleString(state.lang);
+    if ("speechSynthesis" in window) { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(num); u.lang = state.lang; speechSynthesis.speak(u); }
+    await new Promise((res) => setTimeout(res, 1000));
+    if ($("cam").classList.contains("hidden")) return; // closed during the countdown
+  }
+  $("camCount").textContent = "";
+  $("camCount").classList.remove("flash"); void $("camCount").offsetWidth; $("camCount").classList.add("flash");
+  const canvas = document.createElement("canvas");
+  canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+  const ctx = canvas.getContext("2d");
+  if (facing === "user") { ctx.translate(canvas.width, 0); ctx.scale(-1, 1); }
+  ctx.drawImage(video, 0, 0);
+  stopCamera();
+  camBlob = await new Promise((res) => canvas.toBlob(res, "image/jpeg", 0.92));
+  photo.src = URL.createObjectURL(camBlob);
+  photo.classList.remove("hidden"); video.classList.add("hidden");
+  const a = document.createElement("a"); // saved to the phone's Downloads / gallery
+  a.href = photo.src; a.download = `Partner-photo-${localIso().replace(/[ :]/g, "-")}.jpg`; a.click();
+  toast(tr("camSaved"));
+  ["camShare", "camAgain"].forEach((id) => $(id).classList.remove("hidden"));
+  speak(tr("camDone"), state.lang);
+}
+$("camClose").onclick = () => { stopCamera(); $("cam").classList.add("hidden"); speechSynthesis.cancel(); startHandsFree(); };
+$("camAgain").onclick = () => openCamera(camFacing, camTimer);
+$("camShare").onclick = async () => {
+  const file = new File([camBlob], "Partner-photo.jpg", { type: "image/jpeg" });
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file] });
+    else toast(tr("camSaved"));
+  } catch { /* share cancelled */ }
+};
 
 // ---------- scheduled messages (e.g. a birthday wish at exactly 12:00 AM) ----------
 function parseLocal(s) { // "YYYY-MM-DD HH:MM" -> Date in the phone's time zone

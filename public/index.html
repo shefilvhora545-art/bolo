@@ -123,6 +123,18 @@
     </div>
   </div>
 
+  <!-- Camera: opened by voice, counts down, takes and saves the photo -->
+  <div id="cam" class="overlay cam hidden" role="dialog">
+    <video id="camVideo" playsinline muted></video>
+    <img id="camPhoto" alt="" class="hidden">
+    <div id="camCount" class="cam-count"></div>
+    <div class="cam-bar">
+      <button id="camShare" class="big hidden" data-i18n="camShare">📤 Share</button>
+      <button id="camAgain" class="big alt hidden" data-i18n="camAgain">🔄 Take again</button>
+      <button id="camClose" class="big alt" data-i18n="camClose">✖ Close</button>
+    </div>
+  </div>
+
   <!-- First-run setup: language + permissions, like a normal app -->
   <div id="setup" class="overlay hidden" role="dialog">
     <div class="panel setup">
