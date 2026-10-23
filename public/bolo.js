@@ -663,7 +663,19 @@ async function openCamera(facing, timer, shareTo = camShareTo) {
   ["camShare", "camAgain"].forEach((id) => $(id).classList.remove("hidden"));
   $("camShare").textContent = camShareTo ? tr("camSendTo", { who: camShareTo.who }) : tr("camShare");
   $("camShare").classList.toggle("yes", !!camShareTo);
+  // On this PC: send the photo to the person's WhatsApp by itself (zero taps).
+  if (camShareTo && pcHelper && (await pcSendPhoto(camShareTo))) return;
   speak(camShareTo ? tr("camAskSend", { who: camShareTo.who }) : tr("camDone"), state.lang);
+}
+async function pcSendPhoto(to) {
+  speak(tr("camSendingPc", { who: to.who }), state.lang);
+  const image = await new Promise((res) => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(camBlob); });
+  const out = await fetch("/api/pc-send-photo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: to.phone, image }) })
+    .then((x) => x.json()).catch(() => ({ result: "error" }));
+  if (out.result !== "sent") { toast(tr("noDesktop")); return false; }
+  toast(tr("sentTo", { who: to.who }));
+  $("camShare").classList.add("hidden");
+  return true;
 }
 $("camClose").onclick = () => { stopCamera(); $("cam").classList.add("hidden"); speechSynthesis.cancel(); startHandsFree(); };
 $("camAgain").onclick = () => openCamera(camFacing, camTimer);

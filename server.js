@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFile } from "node:child_process";
+import os from "node:os";
 
 if (fs.existsSync(".env")) process.loadEnvFile(".env");
 const { runAgent, translateStrings } = await import("./lib/agent.js");
@@ -33,6 +34,34 @@ function pcSendWhatsApp(phone, text) {
   });
 }
 
+// PC helper: sends a photo to a WhatsApp chat with zero taps. The photo is put on the Windows clipboard,
+// the person's chat opens in WhatsApp Desktop, then Ctrl+V and Enter are pressed.
+function pcSendPhoto(phone, imageBase64) {
+  const digits = String(phone).replace(/\D/g, "");
+  const number = digits.length === 10 ? "91" + digits : digits;
+  const file = path.join(os.tmpdir(), `partner-photo-${Date.now()}.jpg`);
+  fs.writeFileSync(file, Buffer.from(String(imageBase64).replace(/^data:image\/\w+;base64,/, ""), "base64"));
+  const script = [
+    "Add-Type -AssemblyName System.Windows.Forms, System.Drawing",
+    `$img = [System.Drawing.Image]::FromFile('${file.replace(/'/g, "''")}')`,
+    "[System.Windows.Forms.Clipboard]::SetImage($img)",
+    `Start-Process 'whatsapp://send?phone=${number}'`,
+    "Start-Sleep -Seconds 4",
+    "$sh = New-Object -ComObject WScript.Shell",
+    "if ($sh.AppActivate('WhatsApp')) { Start-Sleep -Milliseconds 800; $sh.SendKeys('^v'); Start-Sleep -Seconds 2; $sh.SendKeys('{ENTER}'); 'sent' } else { 'whatsapp-not-found' }",
+    "$img.Dispose()",
+  ].join("; ");
+  return new Promise((resolve) => {
+    execFile("powershell.exe", ["-NoProfile", "-STA", "-Command", script], { windowsHide: true, timeout: 30000 }, (err, stdout) => {
+      fs.rm(file, { force: true }, () => {});
+      resolve(err ? "error" : String(stdout).trim().split(/\r?\n/).pop());
+    });
+  });
+}
+
+// The PC helpers press keys on this computer, so only requests from this same PC may use them.
+const isLocal = (req) => ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(req.socket.remoteAddress);
+
 function readJson(req) {
   return new Promise((resolve, reject) => {
     let raw = "";
@@ -57,7 +86,17 @@ http.createServer(async (req, res) => {
     return;
   }
   if (req.url === "/api/pc-status") {
-    res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ pc: process.platform === "win32" }));
+    res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ pc: process.platform === "win32" && isLocal(req) }));
+    return;
+  }
+  if (req.url.startsWith("/api/pc-") && !isLocal(req)) {
+    res.writeHead(403, { "Content-Type": "application/json" }).end(JSON.stringify({ error: "PC helper is only available on this computer" }));
+    return;
+  }
+  if (req.method === "POST" && req.url === "/api/pc-send-photo") {
+    const { phone, image } = await readJson(req).catch(() => ({}));
+    const result = phone && image ? await pcSendPhoto(phone, image) : "missing";
+    res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ result }));
     return;
   }
   if (req.method === "POST" && req.url === "/api/pc-send") {
