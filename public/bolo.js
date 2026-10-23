@@ -29,6 +29,7 @@ const state = {
   reminders: load("bolo.reminders", []),
   scheduled: load("bolo.scheduled", []), // [{ id, at, contact_id, phone, text, channel }]
   verification: load("bolo.verification", "smart"), // smart | two-step | one-step | off
+  profile: load("bolo.profile", {}), // the user's own details for emails and forms (name, mobile, IDs) - kept on this phone
   pending: null, // an action waiting for "ha / yes"
   settings: load("bolo.settings", {}), // user choices: true = allowed, false = not allowed, missing = not asked yet
   history: [],
@@ -316,6 +317,7 @@ async function handleUtterance(text) {
         verification: state.verification,
         scheduled: state.scheduled.map((s) => ({ contact_id: s.contact_id, at: localIso(new Date(s.at)), text: s.text })),
         contacts: state.contacts,
+        profile: state.profile,
         memory: state.memory,
         history: state.history,
         sharedText: state.sharedText,
@@ -366,7 +368,7 @@ async function handleUtterance(text) {
   }
   // Remember exactly what Partner is about to do, so a spoken correction changes only the wrong part.
   const task = {};
-  for (const k of ["action", "planned_action", "contact_id", "phone", "email_to", "email_subject", "email_body", "message_text", "schedule_at", "reminder_time"]) {
+  for (const k of ["action", "planned_action", "contact_id", "phone", "email_to", "email_cc", "email_bcc", "email_subject", "email_body", "message_text", "schedule_at", "reminder_time"]) {
     if (result[k] && result[k] !== "none") task[k] = result[k];
   }
   state.history.push({ role: "assistant", content: `${result.reply}\n${result.action === "confirm" || result.action === "clarify" ? "PENDING " : "DONE "}${JSON.stringify(task)}` });
@@ -396,6 +398,41 @@ function followUpListen() {
   if (recognizer || state.busy) return;
   listen();
   followTimer = setTimeout(() => { if (recognizer && !state.busy) recognizer.stop(); }, FOLLOW_UP_MS);
+}
+
+// ---------- email details: type, CC, BCC, signature, mobile, reference IDs ----------
+const DETAIL_FIELDS = [ // [key, label key, input type, saved in profile?]
+  ["cc", "fCc", "email", false], ["bcc", "fBcc", "email", false], ["name", "fName", "text", true], ["mobile", "fMobile", "tel", true],
+  ["application_id", "fAppId", "text", true], ["loan_id", "fLoanId", "text", true], ["account_no", "fAcc", "text", true], ["other", "fOther", "text", false],
+];
+function emailDetails(r) {
+  const p = state.profile;
+  const wrap = el(`<details class="details"><summary>${esc(tr("addDetails"))}</summary><div class="dgrid">
+    <label class="small">${esc(tr("emailType"))}<select class="dtype">${["tGeneral", "tLeave", "tBank", "tComplaint", "tJob", "tOfficial"].map((k) => `<option value="${k}">${esc(tr(k))}</option>`).join("")}</select></label>
+  </div></details>`);
+  const grid = wrap.querySelector(".dgrid");
+  for (const [key, labelKey, type, saved] of DETAIL_FIELDS) {
+    const start = key === "cc" ? r.email_cc || "" : key === "bcc" ? r.email_bcc || "" : saved ? p[key] || "" : "";
+    const f = el(`<div class="dfield${start ? " on" : ""}"><label><input type="checkbox"${start ? " checked" : ""}> ${esc(tr(labelKey))}</label>
+      <div class="dinputs">${key === "other" ? `<input type="text" class="dlabel" placeholder="${esc(tr("otherLabelPh"))}">` : ""}<input type="${type}" class="dval" value="${esc(start)}"></div></div>`);
+    f.dataset.key = key;
+    f.querySelector('input[type="checkbox"]').onchange = (e) => { f.classList.toggle("on", e.target.checked); if (e.target.checked) f.querySelector(".dval").focus(); };
+    grid.appendChild(f);
+  }
+  const btn = el(`<button class="big">${esc(tr("updateEmail"))}</button>`);
+  btn.onclick = (e) => {
+    e.stopPropagation();
+    const picked = [...grid.querySelectorAll(".dfield.on")].map((f) => ({ key: f.dataset.key, value: f.querySelector(".dval").value.trim(), label: f.querySelector(".dlabel")?.value.trim() })).filter((x) => x.value);
+    for (const x of picked) { const def = DETAIL_FIELDS.find((d) => d[0] === x.key); if (def && def[3]) state.profile[x.key] = x.value; }
+    save("bolo.profile", state.profile);
+    toast(tr("savedProfile"));
+    const type = tr(grid.querySelector(".dtype").value);
+    const lines = picked.map((x) => `${x.key === "other" ? x.label || "Other detail" : tr(DETAIL_FIELDS.find((d) => d[0] === x.key)[1])}: ${x.value}`);
+    handleUtterance(`Update the pending email: make it a "${type}" email and include these details – ${lines.join("; ") || "no extra details"}. Put CC/BCC addresses into email_cc / email_bcc. Keep the same recipient and purpose. Reply in ${state.lang}.`);
+  };
+  grid.appendChild(btn);
+  wrap.addEventListener("click", (e) => e.stopPropagation());
+  return wrap;
 }
 
 // ---------- WhatsApp sending ----------
@@ -465,7 +502,8 @@ async function runAction(r) {
     case "email": {
       card.appendChild(el(`<div class="card"><h3>📧 ${esc(r.email_to)}</h3><p><b>${esc(r.email_subject)}</b></p><p style="white-space:pre-wrap">${esc(r.email_body)}</p></div>`));
       await speak(r.reply, r.reply_lang);
-      const url = `mailto:${encodeURIComponent(r.email_to)}?subject=${encodeURIComponent(r.email_subject)}&body=${encodeURIComponent(r.email_body)}`;
+      const extra = (r.email_cc ? `&cc=${encodeURIComponent(r.email_cc)}` : "") + (r.email_bcc ? `&bcc=${encodeURIComponent(r.email_bcc)}` : "");
+      const url = `mailto:${encodeURIComponent(r.email_to)}?subject=${encodeURIComponent(r.email_subject)}&body=${encodeURIComponent(r.email_body)}${extra}`;
       confirmAction(`📧 ${r.email_to}`, url, false, { say: tr("sendHint"), tap: tr("tapEmail") });
       return;
     }
@@ -523,11 +561,17 @@ async function runAction(r) {
       const when = r.schedule_at ? `<p class="meta">⏰ ${esc(r.schedule_at)}</p>` : "";
       const box = el(`<div class="card"><h3>${esc(tr("confirmTitle"))}: ${esc(who)}</h3>${when}
         <p style="white-space:pre-wrap">${esc(r.message_text || r.email_subject || "")}</p>
+        ${r.planned_action === "email" && (r.email_cc || r.email_bcc) ? `<p class="meta">${r.email_cc ? "CC: " + esc(r.email_cc) + " " : ""}${r.email_bcc ? "BCC: " + esc(r.email_bcc) : ""}</p>` : ""}
+        ${r.planned_action === "email" && r.email_body ? `<p class="meta" style="white-space:pre-wrap">${esc(r.email_body)}</p>` : ""}
         <div class="row"><button class="big yes">${esc(tr("yes"))}</button><button class="big alt no">${esc(tr("no"))}</button></div></div>`);
       box.querySelector(".yes").onclick = (e) => { e.stopPropagation(); handleUtterance("yes"); };
       box.querySelector(".no").onclick = (e) => { e.stopPropagation(); handleUtterance("no"); };
       card.appendChild(box);
+      if (r.planned_action === "email") {
+        box.querySelector(".row").before(emailDetails(r));
+      }
       await speak(r.reply, r.reply_lang);
+      if (r.planned_action === "email") await speak(tr("detailsHint"), state.lang);
       listen(); // answer by voice straight away
       return;
     }
@@ -1209,7 +1253,7 @@ setLanguage(state.lang).then(() => {
 });
 // Always run the newest Partner: compare with the live version and, if this copy is old,
 // clear the saved copy and reload once.
-const APP_VERSION = "2026.10.23-11";
+const APP_VERSION = "2026.10.23-12";
 fetch("version.json", { cache: "no-store" }).then((r) => r.json()).then(async ({ version }) => {
   if (!version || version === APP_VERSION || sessionStorage.getItem("bolo.reloadedFor") === version) return;
   sessionStorage.setItem("bolo.reloadedFor", version);
