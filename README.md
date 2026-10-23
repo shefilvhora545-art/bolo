@@ -1,6 +1,6 @@
 # Partner – a voice assistant for people who can't use a smartphone screen
 
-**Partner** – the voice assistant you call like a friend: is a simulated **Alexa+** experience for elders, people who cannot read and people with weak eyesight. They don't tap through apps; they just talk, in **Gujarati, Hindi, English** or 18 other languages, and Partner does the job.
+**Partner** is a voice assistant you call like a friend – a simulated **Alexa+** experience for elders, people who cannot read and people with weak eyesight. They don't tap through apps; they just talk, in **Gujarati, Hindi, English** or 18 other languages, and Partner does the job.
 
 > 🔗 **Live demo:** https://bolo-voice-assistant.vercel.app (open in Google Chrome, allow the microphone)
 > Built for the **Build, Ship, Shape: Amazon Developer Hackathon 2026** – Alexa+ track (simulated Alexa+ experience) + Open Source mini challenge.
