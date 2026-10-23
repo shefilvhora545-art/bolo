@@ -60,10 +60,16 @@ function defaultLang() {
 
 
 // ---------- UI state ----------
+const RING_ICONS = {
+  idle: '<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>',
+  listening: '<svg viewBox="0 0 24 24"><path d="M2 12h2M6 8v8M10 5v14M14 8v8M18 10v4M22 12h0"/></svg>',
+  thinking: '<svg viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg>',
+  speaking: '<svg viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5ZM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg>',
+};
 function setMode(mode) { // idle | listening | thinking | speaking
   document.body.classList.remove("listening", "thinking", "speaking");
   if (mode !== "idle") document.body.classList.add(mode);
-  $("ringIcon").textContent = { idle: "🎤", listening: "👂", thinking: "💭", speaking: "🔊" }[mode];
+  $("ringIcon").innerHTML = RING_ICONS[mode];
   $("stateText").textContent = tr({ idle: "ready", listening: "listening", thinking: "thinking", speaking: "speaking" }[mode]);
 }
 function vibrate(pattern) { try { navigator.vibrate && navigator.vibrate(pattern); } catch { /* not supported */ } }
@@ -838,8 +844,8 @@ $("contactForm").onsubmit = (e) => {
   f.reset(); f.elements.id.value = "";
   renderFamily();
 };
-$("btnFamily").onclick = (e) => { e.stopPropagation(); renderFamily(); $("family").classList.remove("hidden"); };
-$("closeFamily").onclick = () => $("family").classList.add("hidden");
+$("btnFamily").onclick = (e) => { e.stopPropagation(); $("setup").classList.add("hidden"); renderFamily(); $("family").classList.remove("hidden"); };
+$("closeFamily").onclick = () => { $("family").classList.add("hidden"); if (load("bolo.setupDone", false)) return; openSetup(); };
 $("verifyMode").onchange = (e) => { state.verification = e.target.value; save("bolo.verification", state.verification); };
 // Import people from the phone's own contact list (Chrome on Android).
 const RELATION_FROM_NAME = [
@@ -974,6 +980,8 @@ async function renderSetup() {
   document.querySelectorAll("[data-setlang]").forEach((b) => b.classList.toggle("on", b.dataset.setlang === state.lang));
   const mic = await permState("microphone");
   markPerm("permMic", mic === "granted" ? "ok" : mic === "denied" ? "no" : "");
+  const cam = await permState("camera");
+  markPerm("permCamera", cam === "granted" ? "ok" : cam === "denied" ? "no" : "");
   const n = "Notification" in window ? Notification.permission : "denied";
   markPerm("permNotif", n === "granted" ? "ok" : n === "denied" ? "no" : "");
   markPerm("permContacts", state.contacts.some((c) => !DEMO_CONTACTS.some((d) => d.id === c.id)) ? "ok" : "");
@@ -1006,6 +1014,21 @@ $("permMic").querySelector("button").onclick = async () => {
     stream.getTracks().forEach((tk) => tk.stop());
     if (Recognition && !handsFree && state.settings.listen !== false) { handsFree = true; save("bolo.handsfree", true); renderHandsFree(); } // always listening for "Partner"
   } catch { toast(tr("blockedHelp")); }
+  renderSetup();
+};
+$("permCamera").querySelector("button").onclick = async () => {
+  try { const st = await navigator.mediaDevices.getUserMedia({ video: true }); st.getTracks().forEach((tk) => tk.stop()); } catch { toast(tr("blockedHelp")); }
+  renderSetup();
+};
+// One tap asks for everything a normal app asks for at install: microphone + camera, notifications, location.
+$("allowAll").onclick = async () => {
+  try {
+    const st = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+    st.getTracks().forEach((tk) => tk.stop());
+    if (Recognition && !handsFree && state.settings.listen !== false) { handsFree = true; save("bolo.handsfree", true); renderHandsFree(); }
+  } catch { /* the user can allow each one below */ }
+  try { if ("Notification" in window && Notification.permission === "default") await Notification.requestPermission(); } catch { /* needs its own tap on some phones */ }
+  await new Promise((res) => (navigator.geolocation ? navigator.geolocation.getCurrentPosition(res, res, { timeout: 10000 }) : res()));
   renderSetup();
 };
 $("permNotif").querySelector("button").onclick = async () => {
@@ -1061,6 +1084,12 @@ document.addEventListener("keydown", (e) => { // PC: press Space to talk
 renderLang();
 renderHandsFree();
 startHandsFree();
+// Microphone already allowed (and not switched off by the user) -> always listening for "Partner" from the start.
+permState("microphone").then((st) => {
+  if (st === "granted" && Recognition && !handsFree && state.settings.listen !== false) {
+    handsFree = true; save("bolo.handsfree", true); renderHandsFree(); startHandsFree();
+  }
+});
 setMode("idle");
 // Live status pill: which AI brain is answering.
 fetch("/api/status").then((r) => r.json()).then((d) => { statusProvider = d.provider || ""; showStatus(); })

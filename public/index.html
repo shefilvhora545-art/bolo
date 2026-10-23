@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#070a1a">
+  <meta name="theme-color" content="#f6f7fb">
   <meta name="description" content="Partner – a voice assistant in Gujarati, Hindi and English for people who can't use a smartphone screen.">
   <title>Partner – Voice Assistant</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%2322d3ee'/><stop offset='.55' stop-color='%238b5cf6'/><stop offset='1' stop-color='%23f472b6'/></linearGradient></defs><circle cx='32' cy='32' r='28' fill='none' stroke='url(%23g)' stroke-width='8'/><circle cx='32' cy='32' r='9' fill='url(%23g)'/></svg>">
@@ -21,9 +21,10 @@
       <span class="logo" aria-hidden="true"></span>
       <div><b>Partner</b><small data-i18n="brandSub">Your voice partner</small></div>
       <span class="status" id="status"><i></i> <span id="statusText" data-i18n="online">Online</span></span>
-      <span class="status hidden" id="nightBadge">🌙</span>
-      <button class="hf" id="settingsBtn" data-i18n-title="settings" title="Settings">⚙️</button>
-      <button class="hf" id="hfBtn" data-i18n-title="hfTitle" title="Hands-free: say “Partner” and your request">🎙 <span id="hfText">Hands-free</span></button>
+      <span class="status hidden" id="nightBadge"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg></span>
+      <span class="spacer"></span>
+      <button class="hf" id="hfBtn" data-i18n-title="hfTitle" title="Hands-free: say “Partner” and your request"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg> <span id="hfText">Hands-free</span></button>
+      <button class="iconbtn" id="settingsBtn" data-i18n-title="settings" title="Settings" aria-label="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg></button>
     </div>
     <div class="langs" id="langs">
       <button data-lang="en-IN" class="chip">English</button>
@@ -67,13 +68,12 @@
   </main>
 
   <nav class="bottom">
-    <button id="btnRead" class="tool">📋 <span data-i18n="btnRead">Read a message</span></button>
-    <button id="btnFamily" class="tool">👨‍👩‍👧 <span data-i18n="btnFamily">Family</span></button>
-    <button id="btnSos" class="tool sos">🆘 <span data-i18n="btnSos">SOS</span></button>
+    <button id="btnRead" class="tool"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/><path d="M8 9h8M8 13h5"/></svg> <span data-i18n="btnRead">Read a message</span></button>
+    <button id="btnSos" class="tool sos"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg> <span data-i18n="btnSos">SOS</span></button>
   </nav>
   <form id="typeForm" class="typebar" autocomplete="off">
     <input id="typeInput" data-i18n-ph="typePh" placeholder="Or type here…">
-    <button>➤</button>
+    <button aria-label="Send"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7Z"/></svg></button>
   </form>
 
   <!-- Big confirm screen: one tap anywhere does the action -->
@@ -146,11 +146,14 @@
         <button data-setlang="hi-IN" class="chip">हिन्दी</button>
         <button data-setlang="gu-IN" class="chip">ગુજરાતી</button>
       </div>
+      <button id="allowAll" class="big" data-i18n="allowAll">Allow all</button>
       <div class="perm" id="permMic"><span class="pi">🎤</span><div><b data-i18n="pMic">Microphone</b><small data-i18n="pMicHelp">So Partner can hear you – always listening for “Partner” while open</small></div><button class="primary" data-i18n="allow">Allow</button><label class="switch" title=""><input type="checkbox"><span></span></label></div>
+      <div class="perm" id="permCamera"><span class="pi">📷</span><div><b data-i18n="pCamera">Camera</b><small data-i18n="pCameraHelp">Take photos and selfies by voice</small></div><button class="primary" data-i18n="allow">Allow</button></div>
       <div class="perm" id="permNotif"><span class="pi">🔔</span><div><b data-i18n="pNotif">Notifications</b><small data-i18n="pNotifHelp">Reminders and midnight birthday wishes, even when the screen is busy</small></div><button class="primary" data-i18n="allow">Allow</button><label class="switch" title=""><input type="checkbox"><span></span></label></div>
       <div class="perm" id="permContacts"><span class="pi">📱</span><div><b data-i18n="pContacts">Contacts</b><small data-i18n="pContactsHelp">Pick your family from the phone's contacts (Mummy, Ammi, Bhai…)</small></div><div class="perm-btns"><button class="primary" id="pickSome" data-i18n="pickSome">Choose contacts</button><button class="ghost" id="pickAll" data-i18n="pickAll">All contacts</button></div></div>
       <div class="perm" id="permLocation"><span class="pi">📍</span><div><b data-i18n="pLocation">Location</b><small data-i18n="pLocationHelp">Only sent to your family when you press SOS</small></div><button class="primary" data-i18n="allow">Allow</button><label class="switch" title=""><input type="checkbox"><span></span></label></div>
       <div class="perm" id="permInstall"><span class="pi">📲</span><div><b data-i18n="pInstall">Install Partner app</b><small data-i18n="pInstallHelp">Icon on your home screen – long-press it for Talk and SOS shortcuts</small></div><button class="primary" data-i18n="install">Install</button></div>
+      <button id="btnFamily" class="ghost wide"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg> <span data-i18n="familyContacts">Family &amp; contacts</span></button>
       <button id="setupDone" class="big" data-i18n="startUsing">Start using Partner</button>
     </div>
   </div>
