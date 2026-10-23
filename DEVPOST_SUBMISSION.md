@@ -64,7 +64,7 @@ Partner is a voice-first assistant in **Gujarati, Hindi, English and 18 more lan
 How to design for users who can't read a screen (spoken confirmations, one giant button, no menus), how to get structured actions from LLMs reliably, and how much Indian family language matters for real usability.
 
 ### What's next for Partner
-A native Android app with Accessibility permissions (truly hands-free sending, no final tap), an Alexa+ skill / MCP server so it runs on real Echo devices, more Indian languages, UPI payments with voice PIN safety, and a family dashboard so children can help their parents remotely.
+A native Android app that registers as the phone's **Default digital assistant** (long-press the power button to talk to Partner even on the lock screen), with **Voice Match** so only the owner's voice can use it, direct calling with the CALL_PHONE permission, and Accessibility support for truly hands-free sending (no final tap); an Alexa+ skill / MCP server so it runs on real Echo devices, more Indian languages, UPI payments with voice PIN safety, and a family dashboard so children can help their parents remotely.
 
 ---
 
