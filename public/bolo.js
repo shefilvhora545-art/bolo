@@ -310,6 +310,18 @@ async function handleUtterance(text) {
 
   state.busy = false;
   $("reply").textContent = result.reply;
+  // A new number by voice ("call my mother, her number is ...") is saved to Family automatically.
+  if (result.new_contact_name && result.phone && /\d{6,}/.test(result.phone)) {
+    const digits = result.phone.replace(/\D/g, "").slice(-10);
+    let saved = state.contacts.find((c) => c.phone.replace(/\D/g, "").slice(-10) === digits);
+    if (!saved) {
+      saved = { id: "c" + Date.now(), name: result.new_contact_name, relation: result.new_contact_relation || "", city: "", phone: result.phone, email: "", birthday: "", emergency: false };
+      state.contacts.push(saved);
+      save("bolo.contacts", state.contacts);
+      toast(`💾 Saved ${saved.name} to Family`);
+    }
+    if (!result.contact_id) result.contact_id = saved.id;
+  }
   // Never lose a task: if the AI filled a reminder or a note next to another action, keep it too.
   if (result.reminder_time && result.action !== "reminder" && result.action !== "confirm" && /^\d{1,2}:\d{2}$/.test(result.reminder_time)) {
     addReminder(result.reminder_time, result.reminder_text || result.reply);
@@ -693,6 +705,42 @@ $("contactForm").onsubmit = (e) => {
 $("btnFamily").onclick = (e) => { e.stopPropagation(); renderFamily(); $("family").classList.remove("hidden"); };
 $("closeFamily").onclick = () => $("family").classList.add("hidden");
 $("verifyMode").onchange = (e) => { state.verification = e.target.value; save("bolo.verification", state.verification); };
+// Import people from the phone's own contact list (Chrome on Android).
+const RELATION_FROM_NAME = [
+  [/\b(mummy|mumma|mom|mommy|maa|mother|mata|ammi|ba)\b/i, "mother"],
+  [/\b(papa|pappa|dad|daddy|father|pita|abbu|bapuji)\b/i, "father"],
+  [/\b(bhai|bhaiya|brother|bro)\b/i, "brother"],
+  [/\b(didi|ben|behen|sister|sis)\b/i, "sister"],
+  [/\b(kaka|chacha)\b/i, "uncle (kaka, father's brother)"],
+  [/\b(mama)\b/i, "uncle (mama, mother's brother)"],
+  [/\b(fai|foi|bua)\b/i, "aunt (fai, father's sister)"],
+  [/\b(masi|mausi)\b/i, "aunt (masi, mother's sister)"],
+  [/\b(dada|nana|grandpa)\b/i, "grandfather"],
+  [/\b(dadi|nani|grandma)\b/i, "grandmother"],
+];
+$("importPhone").onclick = async () => {
+  if (!("contacts" in navigator && "select" in navigator.contacts)) {
+    toast("Open Bolo in Chrome on an Android phone to import contacts. You can also add them below.");
+    return;
+  }
+  try {
+    const picked = await navigator.contacts.select(["name", "tel", "email"], { multiple: true });
+    let added = 0;
+    for (const p of picked) {
+      const name = (p.name && p.name[0]) || "";
+      const phone = (p.tel && p.tel[0]) || "";
+      if (!name || !phone) continue;
+      const digits = phone.replace(/\D/g, "").slice(-10);
+      if (state.contacts.some((c) => c.phone.replace(/\D/g, "").slice(-10) === digits)) continue;
+      const relation = (RELATION_FROM_NAME.find(([re]) => re.test(name)) || [, ""])[1];
+      state.contacts.push({ id: "c" + Date.now() + added, name, relation, city: "", phone, email: (p.email && p.email[0]) || "", birthday: "", emergency: false });
+      added++;
+    }
+    save("bolo.contacts", state.contacts);
+    renderFamily();
+    toast(`📱 Added ${added} contact(s). Edit to add relation / city.`);
+  } catch { toast("Contact import was cancelled."); }
+};
 $("resetDemo").onclick = () => { state.contacts = structuredClone(DEMO_CONTACTS); save("bolo.contacts", state.contacts); renderFamily(); };
 
 // ---------- read a message ----------
