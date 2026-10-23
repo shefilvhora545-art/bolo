@@ -454,7 +454,13 @@ async function sendWhatsApp(phone, text, who) {
 
 // ---------- actions ----------
 function contactById(id) { return state.contacts.find((c) => c.id === id); }
-function label(c) { return c ? `${c.name} ${c.relation ? "(" + c.relation + (c.city ? ", " + c.city : "") + ")" : ""}` : ""; }
+// "Anish (uncle, Nadiad)" - only the first word group of the relation, so labels stay short.
+function label(c) {
+  if (!c) return "";
+  const rel = (c.relation || "").split(" (")[0].trim();
+  const extra = [rel, c.city].filter(Boolean).join(", ");
+  return extra ? `${c.name} (${extra})` : c.name;
+}
 function waNumber(phone) {
   const digits = String(phone).replace(/\D/g, "");
   return digits.length === 10 ? "91" + digits : digits;
@@ -1286,7 +1292,7 @@ setLanguage(state.lang).then(() => {
 });
 // Always run the newest Partner: compare with the live version and, if this copy is old,
 // clear the saved copy and reload once.
-const APP_VERSION = "2026.10.23-14";
+const APP_VERSION = "2026.10.23-15";
 fetch("version.json", { cache: "no-store" }).then((r) => r.json()).then(async ({ version }) => {
   if (!version || version === APP_VERSION || sessionStorage.getItem("bolo.reloadedFor") === version) return;
   sessionStorage.setItem("bolo.reloadedFor", version);
