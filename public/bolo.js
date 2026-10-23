@@ -1013,9 +1013,10 @@ window.addEventListener("appinstalled", () => { installPrompt = null; save("bolo
 
 // Install row keeps a button; the other permissions are Allow / Don't allow choices.
 function markInstall(done) {
-  const row = $("permInstall"), btn = row.querySelector("button");
+  const row = $("permInstall");
   row.classList.toggle("ok", done);
-  btn.textContent = done ? tr("installed") : tr("install");
+  row.querySelector('input[value="install"]').checked = done;
+  row.querySelector('input[value="uninstall"]').checked = false;
 }
 async function permState(name) {
   try { return (await navigator.permissions.query({ name })).state; } catch { return "prompt"; }
@@ -1100,11 +1101,18 @@ $("allowAll").onclick = async () => {
   renderSetup();
 };
 $("pickAll").onclick = () => $("importAll").onclick();
-$("permInstall").querySelector("button").onclick = async () => {
-  if (installPrompt) { installPrompt.prompt(); const c = await installPrompt.userChoice; if (c.outcome === "accepted") save("bolo.installed", true); installPrompt = null; }
-  else toast(tr("installHelp"));
-  renderSetup();
-};
+// Install: the phone's own install prompt. Uninstall: no app can remove itself, so Partner shows and says the steps.
+$("permInstall").querySelectorAll('input[type="radio"]').forEach((radio) => (radio.onchange = async () => {
+  if (radio.value === "install") {
+    if (installPrompt) { installPrompt.prompt(); const c = await installPrompt.userChoice; if (c.outcome === "accepted") save("bolo.installed", true); installPrompt = null; }
+    else toast(tr("installHelp"));
+  } else {
+    save("bolo.installed", false);
+    toast(tr("uninstallHelp"));
+    speak(tr("uninstallHelp"), state.lang);
+  }
+  setTimeout(renderSetup, 400);
+}));
 document.querySelectorAll("[data-setlang]").forEach((b) => (b.onclick = async () => { await setLanguage(b.dataset.setlang); renderSetup(); }));
 $("setupDone").onclick = () => {
   save("bolo.setupDone", true);
@@ -1180,7 +1188,7 @@ setLanguage(state.lang).then(() => {
 });
 // Always run the newest Partner: compare with the live version and, if this copy is old,
 // clear the saved copy and reload once.
-const APP_VERSION = "2026.10.23-8";
+const APP_VERSION = "2026.10.23-9";
 fetch("version.json", { cache: "no-store" }).then((r) => r.json()).then(async ({ version }) => {
   if (!version || version === APP_VERSION || sessionStorage.getItem("bolo.reloadedFor") === version) return;
   sessionStorage.setItem("bolo.reloadedFor", version);
