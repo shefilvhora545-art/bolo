@@ -250,3 +250,7 @@ main#stage > * { max-width: 720px; }
 /* never squeeze the texts in the scrolling middle area (they overlapped on small phones) */
 main#stage > * { flex-shrink: 0; }
 .you { line-height: 1.4; }
+
+/* Back button at the top of every screen */
+.backbtn { display: inline-flex; align-items: center; gap: 4px; background: none; border: 0; padding: 4px 6px 4px 0; margin-bottom: 4px; color: var(--accent); font-weight: 700; font-size: 15px; cursor: pointer; }
+.panel.setup .backbtn { float: left; }

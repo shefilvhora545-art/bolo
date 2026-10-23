@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Noto+Sans+Gujarati:wght@400;600;700&family=Noto+Sans+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=2026.10.23-9">
+  <link rel="stylesheet" href="style.css?v=2026.10.23-10">
 </head>
 <body>
   <div class="aurora" aria-hidden="true"><span></span><span></span><span></span></div>
@@ -100,6 +100,7 @@
   <!-- Family setup (done once by a son/daughter) -->
   <div id="family" class="overlay hidden" role="dialog">
     <div class="panel">
+      <button class="backbtn" data-back><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18 9 12l6-6"/></svg><span data-i18n="back">Back</span></button>
       <h2 data-i18n="famTitle">👨‍👩‍👧 Family contacts</h2>
       <p class="small" data-i18n="famHelp">A family member fills this once. Partner uses relation + city to pick the right person.</p>
       <div id="contactList"></div>
@@ -153,6 +154,7 @@
   <!-- First-run setup: language + permissions, like a normal app -->
   <div id="setup" class="overlay hidden" role="dialog">
     <div class="panel setup">
+      <button class="backbtn" data-back><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18 9 12l6-6"/></svg><span data-i18n="back">Back</span></button>
       <div class="setup-logo" aria-hidden="true"></div>
       <h2 data-i18n="setupTitle">Welcome to Partner</h2>
       <p class="small" data-i18n="setupHelp">Allow these once. Then just say “Partner” and talk.</p>
@@ -177,6 +179,7 @@
   <!-- Paste a message to read / check for fraud -->
   <div id="readBox" class="overlay hidden" role="dialog">
     <div class="panel">
+      <button class="backbtn" data-back><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18 9 12l6-6"/></svg><span data-i18n="back">Back</span></button>
       <h2 data-i18n="readTitle">📋 Message to read</h2>
       <textarea id="readText" rows="7" data-i18n-ph="readPh" placeholder="Paste the SMS / WhatsApp / letter text here"></textarea>
       <div class="row">
@@ -186,7 +189,7 @@
     </div>
   </div>
 
-  <script src="i18n.js?v=2026.10.23-9"></script>
-  <script src="bolo.js?v=2026.10.23-9"></script>
+  <script src="i18n.js?v=2026.10.23-10"></script>
+  <script src="bolo.js?v=2026.10.23-10"></script>
 </body>
 </html>

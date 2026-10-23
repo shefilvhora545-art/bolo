@@ -1145,6 +1145,25 @@ $("tabHome").onclick = () => showTab("home");
 $("tabFeatures").onclick = () => showTab("features");
 $("featuresBack").onclick = () => showTab("home");
 
+// ---------- going back: the ← Back buttons and the phone's own Back button return to Home ----------
+const SCREENS = ["setup", "family", "readBox", "features", "confirm", "cam"];
+function backToHome() {
+  if (!$("cam").classList.contains("hidden")) { stopCamera(); if (state.pending?.kind === "photo") state.pending = null; startHandsFree(); }
+  SCREENS.forEach((id) => $(id).classList.add("hidden"));
+  speechSynthesis.cancel();
+  showTab("home");
+}
+document.querySelectorAll("[data-back]").forEach((b) => (b.onclick = (e) => { e.stopPropagation(); backToHome(); }));
+// Each time a screen opens, add a history step, so the phone's Back button closes it instead of leaving Partner.
+new MutationObserver(() => {
+  const open = SCREENS.some((id) => !$(id).classList.contains("hidden"));
+  if (open && !history.state?.screen) history.pushState({ screen: true }, "");
+  if (!open && history.state?.screen) history.back();
+}).observe(document.body, { subtree: true, attributes: true, attributeFilter: ["class"] });
+window.addEventListener("popstate", () => {
+  if (SCREENS.some((id) => !$(id).classList.contains("hidden"))) backToHome();
+});
+
 // ---------- wiring ----------
 $("stage").addEventListener("click", (e) => {
   if (e.target.closest("button, a, iframe, pre, input, textarea, .card")) return;
@@ -1188,7 +1207,7 @@ setLanguage(state.lang).then(() => {
 });
 // Always run the newest Partner: compare with the live version and, if this copy is old,
 // clear the saved copy and reload once.
-const APP_VERSION = "2026.10.23-9";
+const APP_VERSION = "2026.10.23-10";
 fetch("version.json", { cache: "no-store" }).then((r) => r.json()).then(async ({ version }) => {
   if (!version || version === APP_VERSION || sessionStorage.getItem("bolo.reloadedFor") === version) return;
   sessionStorage.setItem("bolo.reloadedFor", version);
