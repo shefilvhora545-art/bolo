@@ -11,6 +11,7 @@ An Alexa+-style voice assistant that lets elders and people who can't read use t
 - Mini challenge: **Open Source**
 
 ## Try it out (links)
+- Demo video: https://www.youtube.com/watch?v=tN2GZXQRiMg
 - Live app: https://bolo-voice-assistant.vercel.app
 - Code: https://github.com/shefilvhora545-art/bolo
 
