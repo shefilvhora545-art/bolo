@@ -34,6 +34,8 @@ Partner is a voice-first assistant in **Gujarati, Hindi, English and 18 more lan
 - **SOS:** "मदद! मैं गिर गई हूँ" immediately calls the emergency contact and prepares a WhatsApp with the live location.
 - **Memory & reminders:** remembers facts, birthdays and preferences; speaks reminders aloud.
 - **Code mode:** "make me a calculator website" → working code with a live preview.
+- **Camera by voice:** "open my front camera and take a selfie" → opens the camera, counts down aloud, takes and saves the photo.
+- **Opens apps by voice:** "open YouTube and play Sholay movie", "play Arijit Singh songs", "way to Nadiad station", "weather in Nadiad", "install PhonePe", "turn on Bluetooth" → opens YouTube, YouTube Music, Google Maps, Google, Play Store or the Bluetooth settings page with the search already filled in.
 - **Learns new people by voice:** "Call my mother" → *"I don't have her number yet – tell me and I'll save it"*; understands contacts saved as Mummy, Ammi, Abbu, Bhaijaan, Appi, Khala… and can import the family straight from the phone's contacts.
 - **The whole app speaks your language:** every button, hint and question switches instantly between Gujarati, Hindi and English; for Marathi, Tamil, Urdu and 15 more, Claude translates the whole screen once and it is saved on the phone (Urdu/Arabic switch to right-to-left).
 - **Works like an installed app:** a first-run setup page asks for microphone, notifications, contacts and location like any phone app; Partner installs to the home screen with long-press **Talk** and **SOS** shortcuts, and after each task it keeps listening for 8 seconds so the next command needs no wake word.

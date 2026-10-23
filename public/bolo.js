@@ -465,6 +465,15 @@ async function runAction(r) {
       showCode(r);
       break;
     }
+    case "open_app": {
+      await speak(r.reply, r.reply_lang);
+      const target = appTarget(r.app, r.app_query);
+      if (!target) return;
+      if (target.androidOnly && !/android/i.test(navigator.userAgent)) { toast(tr("androidSettings")); return; }
+      toast(tr("opening", { app: target.name }));
+      confirmAction(`${target.icon} ${target.name}${r.app_query ? ": " + r.app_query : ""}`, target.url);
+      return;
+    }
     case "camera": {
       await speak(r.reply, r.reply_lang);
       openCamera(r.camera_facing === "front" ? "user" : "environment", Math.max(0, Math.min(10, +r.camera_timer || 3)));
@@ -574,6 +583,33 @@ function showCode(r) {
     a.click();
   };
   $("card").appendChild(box);
+}
+
+// ---------- open apps by voice ----------
+// Web links that phones open in the matching app (YouTube, Maps...), and Android "intent:" links for settings pages.
+function appTarget(app, query = "") {
+  const q = encodeURIComponent(query.trim());
+  const settings = (action) => `intent:#Intent;action=android.settings.${action};end`;
+  const map = {
+    youtube: { name: "YouTube", icon: "▶️", url: q ? `https://www.youtube.com/results?search_query=${q}` : "https://www.youtube.com/" },
+    youtube_music: { name: "YouTube Music", icon: "🎵", url: q ? `https://music.youtube.com/search?q=${q}` : "https://music.youtube.com/" },
+    spotify: { name: "Spotify", icon: "🎧", url: q ? `https://open.spotify.com/search/${q}` : "https://open.spotify.com/" },
+    google: { name: "Google", icon: "🔎", url: `https://www.google.com/search?q=${q}` },
+    maps: { name: "Google Maps", icon: "🗺️", url: `https://www.google.com/maps/search/?api=1&query=${q}` },
+    maps_directions: { name: "Google Maps", icon: "🧭", url: `https://www.google.com/maps/dir/?api=1&destination=${q}` },
+    play_store: { name: "Play Store", icon: "🛍️", url: `https://play.google.com/store/search?q=${q}&c=apps` },
+    netflix: { name: "Netflix", icon: "🎬", url: q ? `https://www.netflix.com/search?q=${q}` : "https://www.netflix.com/" },
+    prime_video: { name: "Prime Video", icon: "🎬", url: q ? `https://www.primevideo.com/search/?phrase=${q}` : "https://www.primevideo.com/" },
+    instagram: { name: "Instagram", icon: "📷", url: "https://www.instagram.com/" },
+    facebook: { name: "Facebook", icon: "📘", url: "https://www.facebook.com/" },
+    gmail: { name: "Gmail", icon: "📧", url: "https://mail.google.com/" },
+    calendar: { name: "Google Calendar", icon: "📅", url: "https://calendar.google.com/" },
+    news: { name: "Google News", icon: "📰", url: q ? `https://news.google.com/search?q=${q}` : "https://news.google.com/" },
+    bluetooth_settings: { name: "Bluetooth", icon: "🔵", url: settings("BLUETOOTH_SETTINGS"), androidOnly: true },
+    wifi_settings: { name: "Wi-Fi", icon: "📶", url: settings("WIFI_SETTINGS"), androidOnly: true },
+    phone_settings: { name: "Settings", icon: "⚙️", url: settings("SETTINGS"), androidOnly: true },
+  };
+  return map[app] || null;
 }
 
 // ---------- camera by voice: open, count down aloud, take the photo, save it ----------

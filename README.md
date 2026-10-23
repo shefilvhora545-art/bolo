@@ -20,6 +20,9 @@ Hundreds of millions of people in India own a smartphone but cannot really *use*
 | "Read this message – is it a fraud?" | Reads an SMS aloud in simple Gujarati/Hindi and warns: *"This is a fraud, don't share OTP"* |
 | "मदद! मैं गिर गई हूँ" | **SOS** – calls the emergency contact immediately and prepares a WhatsApp with the live location |
 | "Make me a calculator website" | Code mode: writes the code, shows a live preview, copy/download |
+| "Open my front camera and take a selfie" | Opens the camera, counts down aloud, takes and saves the photo, offers Share |
+| "Open YouTube and play Sholay movie" / "way to Nadiad station" / "install PhonePe" | Opens YouTube, Maps directions, Play Store (also YouTube Music, Google, News, Netflix, Prime Video, Gmail…) |
+| "Turn on my Bluetooth" | Opens the phone's Bluetooth settings (Android) – one tap to switch it on |
 
 ### Works like a real app
 - **First-run setup** – choose a language and allow microphone, notifications, contacts and location, like any phone app.
