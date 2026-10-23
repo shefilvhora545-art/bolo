@@ -476,7 +476,8 @@ async function runAction(r) {
     }
     case "camera": {
       await speak(r.reply, r.reply_lang);
-      openCamera(r.camera_facing === "front" ? "user" : "environment", Math.max(0, Math.min(10, +r.camera_timer || 3)));
+      const shareTo = c ? { who: c.name, phone: c.phone } : phone ? { who: phone, phone } : null;
+      openCamera(r.camera_facing === "front" ? "user" : "environment", Math.max(0, Math.min(10, +r.camera_timer || 3)), shareTo);
       return;
     }
     case "confirm": {
@@ -613,10 +614,10 @@ function appTarget(app, query = "") {
 }
 
 // ---------- camera by voice: open, count down aloud, take the photo, save it ----------
-let camStream = null, camBlob = null, camFacing = "environment", camTimer = 3;
+let camStream = null, camBlob = null, camFacing = "environment", camTimer = 3, camShareTo = null;
 function stopCamera() { camStream && camStream.getTracks().forEach((tk) => tk.stop()); camStream = null; }
-async function openCamera(facing, timer) {
-  camFacing = facing; camTimer = timer;
+async function openCamera(facing, timer, shareTo = camShareTo) {
+  camFacing = facing; camTimer = timer; camShareTo = shareTo;
   const video = $("camVideo"), photo = $("camPhoto");
   photo.classList.add("hidden"); video.classList.remove("hidden");
   ["camShare", "camAgain"].forEach((id) => $(id).classList.add("hidden"));
@@ -654,16 +655,28 @@ async function openCamera(facing, timer) {
   a.href = photo.src; a.download = `Partner-photo-${localIso().replace(/[ :]/g, "-")}.jpg`; a.click();
   toast(tr("camSaved"));
   ["camShare", "camAgain"].forEach((id) => $(id).classList.remove("hidden"));
-  speak(tr("camDone"), state.lang);
+  $("camShare").textContent = camShareTo ? tr("camSendTo", { who: camShareTo.who }) : tr("camShare");
+  $("camShare").classList.toggle("yes", !!camShareTo);
+  speak(camShareTo ? tr("camAskSend", { who: camShareTo.who }) : tr("camDone"), state.lang);
 }
 $("camClose").onclick = () => { stopCamera(); $("cam").classList.add("hidden"); speechSynthesis.cancel(); startHandsFree(); };
 $("camAgain").onclick = () => openCamera(camFacing, camTimer);
+// One tap: the phone's share screen with the photo attached (WhatsApp → the person, usually at the top).
+// On a PC: the photo is copied and the person's WhatsApp chat opens - press Ctrl+V and Enter.
 $("camShare").onclick = async () => {
   const file = new File([camBlob], "Partner-photo.jpg", { type: "image/jpeg" });
-  try {
-    if (navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file] });
-    else toast(tr("camSaved"));
-  } catch { /* share cancelled */ }
+  const canShareFiles = navigator.canShare && navigator.canShare({ files: [file] }) && /android|iphone|ipad/i.test(navigator.userAgent);
+  if (canShareFiles) {
+    toast(tr("camPinTip"));
+    try { await navigator.share({ files: [file] }); } catch { /* share cancelled */ }
+    return;
+  }
+  try { // copy the photo so it can be pasted into the chat
+    const png = await new Promise((res) => { const img = new Image(); img.onload = () => { const cv = document.createElement("canvas"); cv.width = img.width; cv.height = img.height; cv.getContext("2d").drawImage(img, 0, 0); cv.toBlob(res, "image/png"); }; img.src = $("camPhoto").src; });
+    await navigator.clipboard.write([new ClipboardItem({ "image/png": png })]);
+    toast(tr("camPasteTip"));
+  } catch { toast(tr("camSaved")); }
+  if (camShareTo) window.open(pcHelper ? `whatsapp://send?phone=${waNumber(camShareTo.phone)}` : `https://wa.me/${waNumber(camShareTo.phone)}`, "_blank");
 };
 
 // ---------- scheduled messages (e.g. a birthday wish at exactly 12:00 AM) ----------
