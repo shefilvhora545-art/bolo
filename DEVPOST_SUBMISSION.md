@@ -15,7 +15,7 @@ An Alexa+-style voice assistant that lets elders and people who can't read use t
 - Code: https://github.com/shefilvhora545-art/bolo
 
 ## Built with
-javascript, html5, css3, node.js, vercel, web-speech-api, claude-api, anthropic-sdk, gemini-api, screen-wake-lock-api
+javascript, html5, css3, node.js, vercel, web-speech-api, claude-api, anthropic-sdk, gemini-api, screen-wake-lock-api, contact-picker-api, web-notifications, pwa
 
 ---
 
@@ -27,13 +27,16 @@ In my family, elders own smartphones but can't really use them. The screen is in
 ### What it does
 Partner is a voice-first assistant in **Gujarati, Hindi, English and 18 more languages**. You tap anywhere – or turn on **hands-free** and just say *"Partner, …"* – and talk:
 - **Calls the right person:** "મારા અનીશ કાકા ને કોલ લગાવ" → *"There are two Anish kakas – Nadiad or Ahmedabad?"* → calls the right one, and **learns** the choice for next time. It understands Indian family words (kaka, mama, fai, masi, bhai, ben, chacha, bua…) and places ("Nadiad vala").
-- **Messages & email by voice:** writes WhatsApp/SMS messages and formal emails, reads them back and waits for a spoken *"ha / yes"*.
+- **Messages & email by voice:** writes WhatsApp/SMS messages and formal emails, reads them back and waits for a spoken *"yes"*. Spoken email addresses are rebuilt automatically ("shefil dot vhora at gmail dot com" → shefil.vhora@gmail.com), and a spoken correction ("no, the email is …") fixes only that detail instead of cancelling.
 - **Midnight birthday wishes:** "Tomorrow is my sister's birthday, wish her at 12 AM" → writes a warm wish, schedules it, and at exactly 00:00 asks once more and sends it on WhatsApp. It also reminds you proactively: *"Tomorrow is Rahul's birthday – shall I schedule a wish?"*
 - **Many tasks in one sentence:** "Remind me at 8 to take my medicine and call Shad bhai" does both, in a safe order.
 - **Scam shield:** reads any SMS aloud in simple language and warns *"This is a fraud – don't click, don't share OTP"*.
 - **SOS:** "मदद! मैं गिर गई हूँ" immediately calls the emergency contact and prepares a WhatsApp with the live location.
 - **Memory & reminders:** remembers facts, birthdays and preferences; speaks reminders aloud.
 - **Code mode:** "make me a calculator website" → working code with a live preview.
+- **Learns new people by voice:** "Call my mother" → *"I don't have her number yet – tell me and I'll save it"*; understands contacts saved as Mummy, Ammi, Abbu, Bhaijaan, Appi, Khala… and can import the family straight from the phone's contacts.
+- **The whole app speaks your language:** every button, hint and question switches instantly between Gujarati, Hindi and English; for Marathi, Tamil, Urdu and 15 more, Claude translates the whole screen once and it is saved on the phone (Urdu/Arabic switch to right-to-left).
+- **Works like an installed app:** a first-run setup page asks for microphone, notifications, contacts and location like any phone app; Partner installs to the home screen with long-press **Talk** and **SOS** shortcuts, and after each task it keeps listening for 8 seconds so the next command needs no wake word.
 
 **Smart safety:** easy tasks just happen; anything that sends a message waits for a spoken "yes"; hard tasks (scheduled messages, unknown email addresses, several recipients) get a full read-back; SOS never waits. These rules are enforced by the app itself, not only by the AI.
 
@@ -53,7 +56,7 @@ Partner is a voice-first assistant in **Gujarati, Hindi, English and 18 more lan
 ### Accomplishments that I'm proud of
 - The *"which Anish kaka?"* moment works in Gujarati, Hindi and English – and Partner remembers the answer.
 - A complete flow from one spoken sentence to a real phone action, with safety confirmations that elders can answer by voice.
-- Built, tested (17+ end-to-end voice commands) and deployed in one evening.
+- Built, tested (25+ end-to-end voice commands in Gujarati, Hindi and English) and deployed in one evening.
 
 ### What I learned
 How to design for users who can't read a screen (spoken confirmations, one giant button, no menus), how to get structured actions from LLMs reliably, and how much Indian family language matters for real usability.
@@ -99,12 +102,12 @@ Record on your **phone** (Android screen recorder with **microphone ON**) using 
 
 | Time | Show | Say |
 |---|---|---|
-| 0:00–0:20 | Partner home screen | "Millions of elders in India own a smartphone but can't use it – the screen is in English and every task needs many taps. This is **Partner** – an Alexa+-style voice assistant. They just speak." |
+| 0:00–0:20 | Partner home screen (tap ગુજરાતી → हिन्दी → English to show the whole screen switching) | "Millions of elders in India own a smartphone but can't use it – the screen is in English and every task needs many taps. This is **Partner** – an Alexa+-style voice assistant. They just speak." |
 | 0:20–0:50 | Tap → say **"મારા અનીશ કાકા ને કોલ લગાવ"** → Partner asks Nadiad or Ahmedabad → say **"નડિયાદ વાળા"** → dialer opens | "We have two Anish kakas. Partner asks which one – and next time it remembers." |
 | 0:50–1:20 | English: **"Tomorrow is my sister Priya's birthday, send her a wish at 12 AM"** → read-back → say **"Yes"** → scheduled card | "One sentence. Partner writes the wish, reads it back, and at exactly midnight asks once more and sends it on WhatsApp." |
 | 1:20–1:45 | Hindi: **"रमेश मामा को व्हाट्सएप करो कि मैं 5 बजे आऊंगा"** → "हाँ या ना?" → say **"हाँ"** | "Anything that sends a message waits for a spoken yes – safe for elders." |
 | 1:45–2:10 | 📋 Read a message → paste the fake SBI KYC SMS → Partner warns FRAUD | "Elders are the main targets of scam SMS. Partner reads it aloud and warns them." |
-| 2:10–2:30 | Turn on 🎙 Hands-free → say **"Partner, remind me at 8 to take medicine and call Shad bhai"** | "Hands-free: no tapping at all – and two tasks from one sentence." |
+| 2:10–2:30 | Turn on 🎙 Hands-free → say **"Partner, remind me at 8 to take medicine and call Shad bhai"** | "Hands-free: say 'Partner' – no tapping at all – and two tasks from one sentence. After each task it keeps listening for a few seconds." |
 | 2:30–2:50 | SOS button / closing screen with the GitHub link | "Partner works in Gujarati, Hindi, English and 18 more languages, is built with Claude, and is open source. Partner – just speak." |
 
 Upload to **YouTube** (Visibility: **Public** or **Unlisted**, no copyrighted music) and paste the link in Devpost.

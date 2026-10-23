@@ -21,8 +21,15 @@ Hundreds of millions of people in India own a smartphone but cannot really *use*
 | "मदद! मैं गिर गई हूँ" | **SOS** – calls the emergency contact immediately and prepares a WhatsApp with the live location |
 | "Make me a calculator website" | Code mode: writes the code, shows a live preview, copy/download |
 
+### Works like a real app
+- **First-run setup** – choose a language and allow microphone, notifications, contacts and location, like any phone app.
+- **Install to the home screen** – long-press the icon for **Talk** and **SOS** shortcuts.
+- **Whole-screen language switch** – Gujarati, Hindi and English built in; 18 more languages translated once by Claude and saved on the phone.
+- **Follow-up listening** – after each task Partner keeps listening for 8 seconds, so the next command needs no wake word.
+- **Spoken corrections** – "no, the email is …" fixes only that detail; spoken email addresses are rebuilt automatically.
+
 ### Designed for people who can't use a screen
-- **Hands-free mode** – say *"Partner, …"*; no tapping at all. When Partner asks a question, just answer.
+- **Hands-free mode** – say *"Partner, …"* (or *"Hey Partner"*); no tapping at all. When Partner asks a question, just answer.
 - **Tap anywhere to talk** – the whole screen is one big button; everything is spoken back; the phone vibrates.
 - **Smart safety** – easy tasks just happen; sending a message waits for a spoken *"ha / yes"*; hard tasks (scheduled messages, unknown email addresses) get a full read-back first; SOS never waits. The app enforces these rules itself, whatever the AI says.
 - **Understands Indian family words** – kaka, kaki, mama, mami, fai, masi, dada, ba, bhai, ben, chacha, bua, mausi… plus "Nadiad vala" (the one from Nadiad).
