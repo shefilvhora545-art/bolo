@@ -30,7 +30,7 @@ const state = {
   scheduled: load("bolo.scheduled", []), // [{ id, at, contact_id, phone, text, channel }]
   verification: load("bolo.verification", "smart"), // smart | two-step | one-step | off
   pending: null, // an action waiting for "ha / yes"
-  settings: { notify: true, location: true, ...load("bolo.settings", {}) }, // user on/off switches
+  settings: load("bolo.settings", {}), // user choices: true = allowed, false = not allowed, missing = not asked yet
   history: [],
   sharedText: "",
   busy: false,
@@ -191,7 +191,7 @@ function waitForMore() {
     if (command) { hfAwake = 0; handleUtterance(command); }
   }, words < 3 ? 2500 : 1500);
 }
-const WAKE = /^(hey |ok |hi |hello |he )?(partner|partnar|patner|pardner|partner ji|પાર્ટનર|પાટનર|पार्टनर|पाटनर|پارٹنر)(?=$|[\s,.!?])[\s,.!?]*/i;
+const WAKE = /^(hey |ok |hi |hello |he )?(partner|partnar|patner|pardner|partner ji|પાર્ટનર|પાટનર|पार्टनर|पाटनर|پارٹنر|பார்ட்னர்|పార్ట్నర్|পার্টনার|ಪಾರ್ಟ್ನರ್|പാർട്ണർ|ਪਾਰਟਨਰ|بارتنر|پارتنر)(?=$|[\s,.!?])[\s,.!?]*/i;
 function renderHandsFree() {
   $("hfBtn").classList.toggle("on", handsFree);
   $("hfText").textContent = handsFree ? tr("hfOn") : tr("hf");
@@ -447,7 +447,7 @@ async function runAction(r) {
       await speak(r.reply, r.reply_lang);
       if (!phone) return;
       if (r.action === "sos") sendSosWhatsApp(c);
-      confirmAction(`📞 ${label(c) || phone}`, `tel:${phone}`, r.action === "sos");
+      confirmAction(`📞 ${label(c) || phone}`, `tel:${phone}`, r.action === "sos", { say: tr("dialHint"), tap: tr("tapCall", { who: c ? c.name : phone }) });
       return;
     }
     case "whatsapp":
@@ -455,9 +455,10 @@ async function runAction(r) {
       card.appendChild(el(`<div class="card"><h3>${r.action === "whatsapp" ? "💬 WhatsApp" : "✉️ SMS"} → ${esc(label(c) || phone)}</h3><p>${esc(r.message_text)}</p></div>`));
       await speak(r.reply, r.reply_lang);
       if (r.action === "whatsapp") {
-        confirmAction(`💬 WhatsApp: ${label(c) || phone}`, () => sendWhatsApp(phone, r.message_text, label(c)));
+        if (!pcHelper) showTapScreen(`💬 WhatsApp: ${label(c) || phone}`, () => sendWhatsApp(phone, r.message_text, label(c)), false, tr("tapWhatsApp", { who: c ? c.name : phone }));
+        else confirmAction(`💬 WhatsApp: ${label(c) || phone}`, () => sendWhatsApp(phone, r.message_text, label(c)));
       } else {
-        confirmAction(`✉️ SMS: ${label(c) || phone}`, `sms:${phone}?body=${encodeURIComponent(r.message_text)}`);
+        confirmAction(`✉️ SMS: ${label(c) || phone}`, `sms:${phone}?body=${encodeURIComponent(r.message_text)}`, false, { say: tr("sendHint"), tap: tr("tapSms") });
       }
       return;
     }
@@ -465,7 +466,7 @@ async function runAction(r) {
       card.appendChild(el(`<div class="card"><h3>📧 ${esc(r.email_to)}</h3><p><b>${esc(r.email_subject)}</b></p><p style="white-space:pre-wrap">${esc(r.email_body)}</p></div>`));
       await speak(r.reply, r.reply_lang);
       const url = `mailto:${encodeURIComponent(r.email_to)}?subject=${encodeURIComponent(r.email_subject)}&body=${encodeURIComponent(r.email_body)}`;
-      confirmAction(`📧 ${r.email_to}`, url);
+      confirmAction(`📧 ${r.email_to}`, url, false, { say: tr("sendHint"), tap: tr("tapEmail") });
       return;
     }
     case "remember": {
@@ -503,10 +504,12 @@ async function runAction(r) {
       if (!target) return;
       if (target.androidOnly && !/android/i.test(navigator.userAgent)) { toast(tr("androidSettings")); return; }
       toast(tr("opening", { app: target.name }));
-      confirmAction(`${target.icon} ${target.name}${r.app_query ? ": " + r.app_query : ""}`, target.url);
+      confirmAction(`${target.icon} ${target.name}${r.app_query ? ": " + r.app_query : ""}`, target.url, false,
+        target.androidOnly ? { tap: tr("tapSettings") } : { tap: tr("tapApp", { app: target.name }) });
       return;
     }
     case "camera": {
+      if (state.settings.camera === false) { speak(tr("camOff"), state.lang); return; }
       await speak(r.reply, r.reply_lang);
       const shareTo = c ? { who: c.name, phone: c.phone } : phone ? { who: phone, phone } : null;
       openCamera(r.camera_facing === "front" ? "user" : "environment", Math.max(0, Math.min(10, +r.camera_timer || 3)), shareTo);
@@ -549,28 +552,31 @@ async function runAction(r) {
 
 // Voice-first: open the call / app straight away. If the phone blocks it (or in 2-step mode),
 // show one big "tap anywhere" button instead.
-function confirmAction(text, url, danger = false) {
+// guide.say = spoken before the phone opens the app ("Press the green Call button…"),
+// guide.tap = spoken when the phone needs a tap on Partner's big button first.
+async function confirmAction(text, url, danger = false, guide = {}) {
   if (state.verification === "smart" || state.verification === "off") { // 1-step / 2-step always show the tap screen
     if (typeof url === "function") { url(); return; }
     if (/^https?:/.test(url)) {
-      if (window.open(url, "_blank")) return; // WhatsApp in a new tab keeps Partner (and its timers) alive
+      if (window.open(url, "_blank")) { if (guide.say) speak(guide.say, state.lang); return; } // new tab keeps Partner alive
     } else {
-      window.location.href = url; // tel: / sms: / mailto: open the phone app without leaving Partner
-      setTimeout(() => { if (document.visibilityState === "visible") showTapScreen(text, url, danger); }, 1500);
+      if (guide.say) await speak(guide.say, state.lang);
+      window.location.href = url; // tel: / sms: / mailto: / settings open the phone app without leaving Partner
+      setTimeout(() => { if (document.visibilityState === "visible") showTapScreen(text, url, danger, guide.tap); }, 1500);
       return;
     }
   }
-  showTapScreen(text, url, danger);
+  showTapScreen(text, url, danger, guide.tap);
 }
 
 // Full-screen "tap anywhere" button - used when the phone needs a real tap to open another app.
-function showTapScreen(text, url, danger = false) {
+function showTapScreen(text, url, danger = false, spoken = "") {
   const box = $("confirm"), go = $("confirmGo");
   go.textContent = text + "  ✔";
   go.classList.toggle("danger", danger);
   box.classList.remove("hidden");
   vibrate(200);
-  speak(tr("tapConfirm"), state.lang);
+  speak(spoken || tr("tapConfirm"), state.lang);
   go.onclick = () => {
     box.classList.add("hidden"); speechSynthesis.cancel();
     typeof url === "function" ? url() : (window.location.href = url);
@@ -580,7 +586,7 @@ function showTapScreen(text, url, danger = false) {
 
 function sendSosWhatsApp(c) {
   const target = c || state.contacts.find((x) => x.emergency);
-  if (!target || !navigator.geolocation || !state.settings.location) return; // the call still happens
+  if (!target || !navigator.geolocation || state.settings.location === false) return; // the call still happens
   navigator.geolocation.getCurrentPosition(
     (pos) => {
       const link = `https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`;
@@ -995,7 +1001,7 @@ $("btnSos").onclick = (e) => {
 // ---------- first-run setup: language + permissions ----------
 async function notify(title, body) { // a phone notification, also when Partner is in the background
   try {
-    if (!state.settings.notify || !("Notification" in window) || Notification.permission !== "granted") return;
+    if (state.settings.notify === false || !("Notification" in window) || Notification.permission !== "granted") return;
     const reg = "serviceWorker" in navigator && (await navigator.serviceWorker.getRegistration());
     if (reg) reg.showNotification(title, { body, icon: "icons/icon-192.png", badge: "icons/icon-192.png", vibrate: [300, 100, 300] });
     else new Notification(title, { body, icon: "icons/icon-192.png" });
@@ -1005,98 +1011,95 @@ let installPrompt = null;
 window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installPrompt = e; renderSetup(); });
 window.addEventListener("appinstalled", () => { installPrompt = null; save("bolo.installed", true); renderSetup(); });
 
-function markPerm(id, status) { // status: "ok" | "no" | ""
-  const row = $(id), btn = row.querySelector("button");
-  row.classList.toggle("ok", status === "ok");
-  row.classList.toggle("no", status === "no");
-  if (id === "permContacts") { btn.textContent = status === "ok" ? tr("allowed") : tr("pickSome"); return; }
-  const isInstall = id === "permInstall";
-  btn.textContent = status === "ok" ? tr(isInstall ? "installed" : "allowed") : status === "no" ? tr("denied") : tr(isInstall ? "install" : "allow");
+// Install row keeps a button; the other permissions are Allow / Don't allow choices.
+function markInstall(done) {
+  const row = $("permInstall"), btn = row.querySelector("button");
+  row.classList.toggle("ok", done);
+  btn.textContent = done ? tr("installed") : tr("install");
 }
 async function permState(name) {
   try { return (await navigator.permissions.query({ name })).state; } catch { return "prompt"; }
 }
-function setSwitch(rowId, checked, labelKey) {
-  const sw = $(rowId).querySelector(".switch");
-  if (!sw) return;
-  sw.querySelector("input").checked = checked;
-  sw.title = tr(labelKey);
-  sw.querySelector("input").setAttribute("aria-label", tr(labelKey));
+// Each permission: the app setting it controls and the browser permission behind it.
+const PERMS = {
+  permMic: { key: "listen", query: "microphone" },
+  permCamera: { key: "camera", query: "camera" },
+  permNotif: { key: "notify" },
+  permContacts: { key: "contacts" },
+  permLocation: { key: "location", query: "geolocation" },
+};
+async function browserState(id) {
+  if (id === "permNotif") return "Notification" in window ? (Notification.permission === "default" ? "prompt" : Notification.permission) : "denied";
+  if (id === "permContacts") return state.contacts.some((c) => !DEMO_CONTACTS.some((d) => d.id === c.id)) ? "granted" : "prompt";
+  return permState(PERMS[id].query);
 }
 async function renderSetup() {
   if ($("setup").classList.contains("hidden")) return;
-  setSwitch("permMic", handsFree, "switchMic");
-  setSwitch("permNotif", state.settings.notify, "switchNotif");
-  setSwitch("permLocation", state.settings.location, "switchLoc");
   document.querySelectorAll("[data-setlang]").forEach((b) => b.classList.toggle("on", b.dataset.setlang === state.lang));
-  const mic = await permState("microphone");
-  markPerm("permMic", mic === "granted" ? "ok" : mic === "denied" ? "no" : "");
-  const cam = await permState("camera");
-  markPerm("permCamera", cam === "granted" ? "ok" : cam === "denied" ? "no" : "");
-  const n = "Notification" in window ? Notification.permission : "denied";
-  markPerm("permNotif", n === "granted" ? "ok" : n === "denied" ? "no" : "");
-  markPerm("permContacts", state.contacts.some((c) => !DEMO_CONTACTS.some((d) => d.id === c.id)) ? "ok" : "");
-  const geo = await permState("geolocation");
-  markPerm("permLocation", geo === "granted" ? "ok" : geo === "denied" ? "no" : "");
-  const standalone = matchMedia("(display-mode: standalone)").matches || load("bolo.installed", false);
-  markPerm("permInstall", standalone ? "ok" : "");
+  for (const id of Object.keys(PERMS)) {
+    const row = $(id), choice = state.settings[PERMS[id].key], st = await browserState(id);
+    const allowed = choice !== false && (st === "granted" || choice === true);
+    row.querySelector('input[value="allow"]').checked = allowed;
+    row.querySelector('input[value="deny"]').checked = choice === false;
+    row.classList.toggle("ok", allowed && st === "granted");
+    row.querySelector(".blocked").classList.toggle("hidden", !(choice !== false && st === "denied"));
+  }
+  markInstall(matchMedia("(display-mode: standalone)").matches || load("bolo.installed", false));
 }
 function openSetup() { $("family").classList.add("hidden"); $("setup").classList.remove("hidden"); renderSetup(); }
 
 function saveSettings() { save("bolo.settings", state.settings); }
-$("permMic").querySelector(".switch input").onchange = (e) => {
-  handsFree = e.target.checked;
-  state.settings.listen = e.target.checked;
-  save("bolo.handsfree", handsFree); saveSettings();
-  renderHandsFree();
-  if (handsFree) startHandsFree(); else { stopHandsFree(); toast(tr("listenOff")); }
-};
-$("permNotif").querySelector(".switch input").onchange = (e) => {
-  state.settings.notify = e.target.checked; saveSettings();
-  if (!e.target.checked) toast(tr("notifOff"));
-};
-$("permLocation").querySelector(".switch input").onchange = (e) => {
-  state.settings.location = e.target.checked; saveSettings();
-  if (!e.target.checked) toast(tr("locOff"));
-};
-$("permMic").querySelector("button").onclick = async () => {
+// Ask the phone for one permission. Returns true when it is granted.
+async function requestPerm(id) {
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    stream.getTracks().forEach((tk) => tk.stop());
-    if (Recognition && !handsFree && state.settings.listen !== false) { handsFree = true; save("bolo.handsfree", true); renderHandsFree(); } // always listening for "Partner"
-  } catch { toast(tr("blockedHelp")); }
-  renderSetup();
-};
-$("permCamera").querySelector("button").onclick = async () => {
-  try { const st = await navigator.mediaDevices.getUserMedia({ video: true }); st.getTracks().forEach((tk) => tk.stop()); } catch { toast(tr("blockedHelp")); }
-  renderSetup();
-};
-// One tap asks for everything a normal app asks for at install: microphone + camera, notifications, location.
+    if (id === "permMic" || id === "permCamera") {
+      const st = await navigator.mediaDevices.getUserMedia(id === "permMic" ? { audio: true } : { video: true });
+      st.getTracks().forEach((tk) => tk.stop());
+      return true;
+    }
+    if (id === "permNotif") return "Notification" in window && (await Notification.requestPermission()) === "granted";
+    if (id === "permLocation") return await new Promise((res) => navigator.geolocation ? navigator.geolocation.getCurrentPosition(() => res(true), () => res(false), { timeout: 10000 }) : res(false));
+    if (id === "permContacts") {
+      if ("contacts" in navigator && "select" in navigator.contacts) { await $("importPhone").onclick(); return true; }
+      $("setup").classList.add("hidden"); renderFamily(); $("family").classList.remove("hidden"); toast(tr("importNeedsChrome"));
+      return true;
+    }
+  } catch { /* blocked or cancelled */ }
+  return false;
+}
+// What each choice changes inside Partner.
+function applyChoice(id, on) {
+  state.settings[PERMS[id].key] = on;
+  saveSettings();
+  if (id === "permMic") {
+    handsFree = on && !!Recognition; save("bolo.handsfree", handsFree); renderHandsFree();
+    if (handsFree) startHandsFree(); else { stopHandsFree(); if (!on) toast(tr("listenOff")); }
+  }
+  if (id === "permNotif" && !on) toast(tr("notifOff"));
+  if (id === "permLocation" && !on) toast(tr("locOff"));
+}
+for (const id of Object.keys(PERMS)) {
+  $(id).querySelectorAll('input[type="radio"]').forEach((radio) => (radio.onchange = async () => {
+    if (radio.value === "allow") {
+      const ok = await requestPerm(id);
+      applyChoice(id, true);
+      if (!ok && id !== "permContacts") toast(tr("blockedHelp"));
+    } else applyChoice(id, false);
+    renderSetup();
+  }));
+}
+// One tap: allow everything a normal app asks for at install.
 $("allowAll").onclick = async () => {
   try {
     const st = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
     st.getTracks().forEach((tk) => tk.stop());
-    if (Recognition && !handsFree && state.settings.listen !== false) { handsFree = true; save("bolo.handsfree", true); renderHandsFree(); }
-  } catch { /* the user can allow each one below */ }
+  } catch { /* each one can still be allowed below */ }
   try { if ("Notification" in window && Notification.permission === "default") await Notification.requestPermission(); } catch { /* needs its own tap on some phones */ }
   await new Promise((res) => (navigator.geolocation ? navigator.geolocation.getCurrentPosition(res, res, { timeout: 10000 }) : res()));
+  ["permMic", "permCamera", "permNotif", "permLocation"].forEach((id) => applyChoice(id, true));
   renderSetup();
-};
-$("permNotif").querySelector("button").onclick = async () => {
-  if (!("Notification" in window)) { toast(tr("blockedHelp")); return; }
-  const r = await Notification.requestPermission();
-  if (r === "granted") notify(tr("reminderTitle"), tr("allowed")); else if (r === "denied") toast(tr("blockedHelp"));
-  renderSetup();
-};
-$("pickSome").onclick = async () => {
-  if ("contacts" in navigator && "select" in navigator.contacts) { await $("importPhone").onclick(); renderSetup(); }
-  else { $("setup").classList.add("hidden"); renderFamily(); $("family").classList.remove("hidden"); toast(tr("importNeedsChrome")); }
 };
 $("pickAll").onclick = () => $("importAll").onclick();
-$("permLocation").querySelector("button").onclick = () => {
-  if (!navigator.geolocation) { toast(tr("blockedHelp")); return; }
-  navigator.geolocation.getCurrentPosition(() => renderSetup(), () => { toast(tr("blockedHelp")); renderSetup(); }, { timeout: 10000 });
-};
 $("permInstall").querySelector("button").onclick = async () => {
   if (installPrompt) { installPrompt.prompt(); const c = await installPrompt.userChoice; if (c.outcome === "accepted") save("bolo.installed", true); installPrompt = null; }
   else toast(tr("installHelp"));

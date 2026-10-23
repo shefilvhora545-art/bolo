@@ -235,6 +235,14 @@ main#stage > * { max-width: 720px; }
 .fcard h3 { margin: 0 0 4px; font-size: 16px; display: flex; gap: 8px; align-items: center; }
 .fcard p { margin: 0 0 10px; color: var(--muted); font-size: 14px; }
 .fcard button { width: 100%; text-align: left; background: var(--accent-soft); color: var(--accent); border: 0; border-radius: 10px; padding: 9px 12px; font-size: 14px; font-weight: 600; cursor: pointer; }
+/* Allow / Don't allow choices */
+.choice { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+.choice label { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.choice input { accent-color: var(--accent); width: 18px; height: 18px; margin: 0; }
+.choice label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.choice label:has(input[value="deny"]:checked) { border-color: #d6d9e6; background: var(--surface-2); color: var(--muted); }
+.perm small.blocked { color: var(--red); font-weight: 600; margin-top: 2px; }
+.linkbtn { background: none; border: 0; padding: 4px 0 0; color: var(--accent); font-weight: 700; font-size: 13px; cursor: pointer; }
 .pulse { animation: pulse-btn 1s ease-in-out infinite; }
 @keyframes pulse-btn { 50% { transform: scale(1.04); box-shadow: 0 0 0 8px #16a34a33; } }
 .fcard .soon { display: inline-block; font-size: 11px; font-weight: 700; color: var(--muted); background: var(--surface-2); border-radius: 6px; padding: 2px 6px; margin-left: auto; }
