@@ -53,11 +53,8 @@ function localIso(d = new Date()) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
-// First visit: use the phone's own language if Partner has it, otherwise English.
+// First visit: English (the user can switch to Hindi or Gujarati with one tap).
 function defaultLang() {
-  const nav = (navigator.language || "en").toLowerCase();
-  if (nav.startsWith("gu")) return "gu-IN";
-  if (nav.startsWith("hi")) return "hi-IN";
   return "en-IN";
 }
 
