@@ -323,6 +323,7 @@ async function handleUtterance(text) {
         scheduled: state.scheduled.map((s) => ({ contact_id: s.contact_id, at: localIso(new Date(s.at)), text: s.text })),
         contacts: state.contacts,
         profile: state.profile,
+        photoReady: !!camBlob && Date.now() - camTakenAt < 30 * 60 * 1000,
         memory: state.memory,
         history: state.history,
         sharedText: state.sharedText,
@@ -453,7 +454,15 @@ async function sendWhatsApp(phone, text, who) {
     if (r.result === "sent") { toast(tr("sentTo", { who: who || phone })); return; }
     toast(tr("noDesktop"));
   }
-  window.location.href = `https://wa.me/${waNumber(phone)}?text=${encodeURIComponent(text)}`;
+  openWhatsAppChat(phone, text);
+}
+// Opens the WhatsApp app straight away; only if it is not installed, fall back to the web link.
+function openWhatsAppChat(phone, text) {
+  const n = waNumber(phone), t = encodeURIComponent(text || "");
+  const isPhone = /android|iphone|ipad/i.test(navigator.userAgent) || IS_IOS;
+  if (!isPhone) { window.open(`https://wa.me/${n}${t ? "?text=" + t : ""}`, "_blank"); return; }
+  window.location.href = `whatsapp://send?phone=${n}${t ? "&text=" + t : ""}`;
+  setTimeout(() => { if (document.visibilityState === "visible") window.location.href = `https://wa.me/${n}${t ? "?text=" + t : ""}`; }, 2500);
 }
 
 // ---------- actions ----------
@@ -571,6 +580,21 @@ async function runAction(r) {
         target.androidOnly ? { tap: tr("tapSettings") } : { tap: tr("tapApp", { app: target.name }) });
       return;
     }
+    case "share_photo": {
+      if (!camBlob) { speak(tr("noPhoto"), state.lang); return; }
+      await speak(r.reply, r.reply_lang);
+      const to = { who: c ? c.name : phone, phone };
+      if (pcHelper && to.phone && (await pcSendPhoto(to))) return; // this PC: zero taps
+      // The phone's share screen needs a real tap, so show one big button that opens it with the photo attached.
+      showTapScreen(tr("camSendPhoto", { who: to.who }), async () => {
+        const file = new File([camBlob], "Partner-photo.jpg", { type: "image/jpeg" });
+        try {
+          if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file] }); return; }
+        } catch { return; /* cancelled */ }
+        openWhatsAppChat(to.phone, "");
+      }, false, tr("camTapPhoto", { who: to.who }));
+      return;
+    }
     case "camera": {
       if (state.settings.camera === false) { speak(tr("camOff"), state.lang); return; }
       await speak(r.reply, r.reply_lang);
@@ -660,7 +684,7 @@ function sendSosWhatsApp(c) {
     (pos) => {
       const link = `https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`;
       const msg = tr("sosMsg", { link });
-      $("card").appendChild(el(`<div class="card scam"><h3>${esc(tr("sosTitle"))} → ${esc(label(target))}</h3><a class="big" href="https://wa.me/${waNumber(target.phone)}?text=${encodeURIComponent(msg)}">${esc(tr("sosSendLoc"))}</a></div>`));
+      $("card").appendChild(el(`<div class="card scam"><h3>${esc(tr("sosTitle"))} → ${esc(label(target))}</h3><a class="big" href="whatsapp://send?phone=${waNumber(target.phone)}&text=${encodeURIComponent(msg)}">${esc(tr("sosSendLoc"))}</a></div>`));
     },
     () => { /* location denied: the call still works */ },
     { enableHighAccuracy: true, timeout: 8000 }
@@ -725,7 +749,7 @@ function appTarget(app, query = "") {
 }
 
 // ---------- camera by voice: open, count down aloud, take the photo, save it ----------
-let camStream = null, camBlob = null, camFacing = "environment", camTimer = 3, camShareTo = null;
+let camStream = null, camBlob = null, camFacing = "environment", camTimer = 3, camShareTo = null, camTakenAt = 0;
 function stopCamera() { camStream && camStream.getTracks().forEach((tk) => tk.stop()); camStream = null; }
 async function openCamera(facing, timer, shareTo = camShareTo) {
   camFacing = facing; camTimer = timer; camShareTo = shareTo;
@@ -760,6 +784,7 @@ async function openCamera(facing, timer, shareTo = camShareTo) {
   ctx.drawImage(video, 0, 0);
   stopCamera();
   camBlob = await new Promise((res) => canvas.toBlob(res, "image/jpeg", 0.92));
+  camTakenAt = Date.now();
   photo.src = URL.createObjectURL(camBlob);
   photo.classList.remove("hidden"); video.classList.add("hidden");
   const a = document.createElement("a"); // saved to the phone's Downloads / gallery
@@ -812,7 +837,7 @@ $("camShare").onclick = async () => {
     await navigator.clipboard.write([new ClipboardItem({ "image/png": png })]);
     toast(tr("camPasteTip"));
   } catch { toast(tr("camSaved")); }
-  if (camShareTo) window.open(pcHelper ? `whatsapp://send?phone=${waNumber(camShareTo.phone)}` : `https://wa.me/${waNumber(camShareTo.phone)}`, "_blank");
+  if (camShareTo) { if (pcHelper) window.open(`whatsapp://send?phone=${waNumber(camShareTo.phone)}`, "_blank"); else openWhatsAppChat(camShareTo.phone, ""); }
 };
 
 // ---------- scheduled messages (e.g. a birthday wish at exactly 12:00 AM) ----------
@@ -1323,7 +1348,7 @@ setLanguage(state.lang).then(() => {
 });
 // Always run the newest Partner: compare with the live version and, if this copy is old,
 // clear the saved copy and reload once.
-const APP_VERSION = "2026.10.23-17";
+const APP_VERSION = "2026.10.24-18";
 fetch("version.json", { cache: "no-store" }).then((r) => r.json()).then(async ({ version }) => {
   if (!version || version === APP_VERSION || sessionStorage.getItem("bolo.reloadedFor") === version) return;
   sessionStorage.setItem("bolo.reloadedFor", version);

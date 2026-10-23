@@ -2,5 +2,25 @@
   "framework": null,
   "buildCommand": "",
   "outputDirectory": "public",
-  "functions": { "api/agent.js": { "maxDuration": 60 }, "api/translate.js": { "maxDuration": 60 } }
+  "functions": {
+    "api/agent.js": {
+      "maxDuration": 60
+    },
+    "api/translate.js": {
+      "maxDuration": 60
+    }
+  },
+  "redirects": [
+    {
+      "source": "/((?!api/).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "bolo-voice-assistant.vercel.app"
+        }
+      ],
+      "destination": "https://partner-voice-assistant.vercel.app/$1",
+      "permanent": false
+    }
+  ]
 }
