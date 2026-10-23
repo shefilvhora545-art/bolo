@@ -266,3 +266,9 @@ main#stage > * { flex-shrink: 0; }
 /* Back button at the top of every screen */
 .backbtn { display: inline-flex; align-items: center; gap: 4px; background: none; border: 0; padding: 4px 6px 4px 0; margin-bottom: 4px; color: var(--accent); font-weight: 700; font-size: 15px; cursor: pointer; }
 .panel.setup .backbtn { float: left; }
+
+/* Yes / No pop-up */
+#ask { align-items: center; justify-content: center; z-index: 15; }
+.askbox { text-align: center; max-width: 420px; margin: auto; }
+.askicon { font-size: 40px; margin-bottom: 4px; }
+.askbox h2 { margin-bottom: 4px; }

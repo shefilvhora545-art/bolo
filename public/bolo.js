@@ -253,6 +253,7 @@ async function handleUtterance(text) {
     const pending = state.pending;
     const said = text.trim().replace(/^["“]|["”.!?,]$/g, "");
     const short = said.split(/\s+/).length <= 3; // "ha", "no", "yes please" - anything longer may be a correction
+    if (pending.kind === "ask" && short && (YES.test(said) || NO.test(said))) { pending.done(YES.test(said)); return; }
     if (pending.kind === "photo" && short && (YES.test(said) || NO.test(said))) {
       state.pending = null;
       if (YES.test(said)) await sendPhotoAfterYes(pending.to);
@@ -540,7 +541,7 @@ async function runAction(r) {
       await speak(r.reply, r.reply_lang);
       const target = appTarget(r.app, r.app_query);
       if (!target) return;
-      if (target.uninstall) toast(tr("uninstallHelp")); // no app can remove itself: show the steps
+      if (target.uninstall) { uninstallPartner(); return; } // ask yes / no first, then Android's uninstall screen
       if (target.install) { // Chrome shows its install prompt only after a real tap
         const installed = matchMedia("(display-mode: standalone)").matches;
         if (installed) { toast(tr("installed")); return; }
@@ -1166,9 +1167,7 @@ $("permInstall").querySelectorAll('input[type="radio"]').forEach((radio) => (rad
     if (installPrompt) { installPrompt.prompt(); const c = await installPrompt.userChoice; if (c.outcome === "accepted") save("bolo.installed", true); installPrompt = null; }
     else toast(tr("installHelp"));
   } else {
-    save("bolo.installed", false);
-    toast(tr("uninstallHelp"));
-    speak(tr("uninstallHelp"), state.lang);
+    await uninstallPartner();
   }
   setTimeout(renderSetup, 400);
 }));
@@ -1204,8 +1203,29 @@ $("tabHome").onclick = () => showTab("home");
 $("tabFeatures").onclick = () => showTab("features");
 $("featuresBack").onclick = () => showTab("home");
 
+// ---------- Yes / No pop-up: answer by tap or by voice ----------
+function askYesNo(icon, title, question) {
+  return new Promise((resolve) => {
+    $("askIcon").textContent = icon; $("askTitle").textContent = title; $("askText").textContent = question;
+    $("ask").classList.remove("hidden");
+    const done = (yes) => { $("ask").classList.add("hidden"); if (state.pending?.kind === "ask") state.pending = null; speechSynthesis.cancel(); resolve(yes); };
+    $("askYes").onclick = (e) => { e.stopPropagation(); done(true); };
+    $("askNo").onclick = (e) => { e.stopPropagation(); done(false); };
+    state.pending = { kind: "ask", done };
+    speak(question, state.lang).then(() => { if (state.pending?.kind === "ask") listen(); });
+  });
+}
+// Uninstall: ask first, then open Android's own uninstall screen (Android always asks for its final OK).
+async function uninstallPartner() {
+  if (!(await askYesNo("🗑️", tr("uninstallTitle"), tr("uninstallAsk")))) { speak(tr("cancelText"), state.lang); return; }
+  save("bolo.installed", false);
+  if (!/android/i.test(navigator.userAgent)) { toast(tr("uninstallHelp")); speak(tr("uninstallHelp"), state.lang); return; }
+  await speak(tr("uninstallGo"), state.lang);
+  window.location.href = "intent:#Intent;action=android.settings.MANAGE_APPLICATIONS_SETTINGS;end";
+}
+
 // ---------- going back: the ← Back buttons and the phone's own Back button return to Home ----------
-const SCREENS = ["setup", "family", "readBox", "features", "confirm", "cam"];
+const SCREENS = ["setup", "family", "readBox", "features", "confirm", "cam", "ask"];
 function backToHome() {
   if (!$("cam").classList.contains("hidden")) { stopCamera(); if (state.pending?.kind === "photo") state.pending = null; startHandsFree(); }
   SCREENS.forEach((id) => $(id).classList.add("hidden"));
@@ -1266,7 +1286,7 @@ setLanguage(state.lang).then(() => {
 });
 // Always run the newest Partner: compare with the live version and, if this copy is old,
 // clear the saved copy and reload once.
-const APP_VERSION = "2026.10.23-13";
+const APP_VERSION = "2026.10.23-14";
 fetch("version.json", { cache: "no-store" }).then((r) => r.json()).then(async ({ version }) => {
   if (!version || version === APP_VERSION || sessionStorage.getItem("bolo.reloadedFor") === version) return;
   sessionStorage.setItem("bolo.reloadedFor", version);

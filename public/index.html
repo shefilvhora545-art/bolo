@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Noto+Sans+Gujarati:wght@400;600;700&family=Noto+Sans+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=2026.10.23-13">
+  <link rel="stylesheet" href="style.css?v=2026.10.23-14">
 </head>
 <body>
   <div class="aurora" aria-hidden="true"><span></span><span></span><span></span></div>
@@ -89,6 +89,16 @@
     <div class="pagehead"><button class="iconbtn" id="featuresBack" aria-label="Back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18 9 12l6-6"/></svg></button><h2 data-i18n="featuresTitle">What Partner can do</h2></div>
     <p class="small pad" data-i18n="featuresHelp">Tap any example and Partner will do it. You can also just say it.</p>
     <div id="featureList" class="flist"></div>
+  </div>
+
+  <!-- Yes / No question pop-up (tap or answer by voice) -->
+  <div id="ask" class="overlay hidden" role="dialog">
+    <div class="panel askbox">
+      <div class="askicon" id="askIcon">🗑️</div>
+      <h2 id="askTitle"></h2>
+      <p class="small" id="askText"></p>
+      <div class="row"><button id="askNo" class="big alt" data-i18n="no">✖ No</button><button id="askYes" class="big" data-i18n="yes">✔ Yes</button></div>
+    </div>
   </div>
 
   <!-- Big confirm screen: one tap anywhere does the action -->
@@ -189,7 +199,7 @@
     </div>
   </div>
 
-  <script src="i18n.js?v=2026.10.23-13"></script>
-  <script src="bolo.js?v=2026.10.23-13"></script>
+  <script src="i18n.js?v=2026.10.23-14"></script>
+  <script src="bolo.js?v=2026.10.23-14"></script>
 </body>
 </html>
