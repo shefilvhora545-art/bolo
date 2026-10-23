@@ -1,5 +1,5 @@
 // Partner service worker: makes the app installable and shows the app shell offline.
-const CACHE = "partner-v8";
+const CACHE = "partner-v9";
 const SHELL = ["/", "/index.html", "/icons/icon-192.png"];
 
 self.addEventListener("install", (e) => {

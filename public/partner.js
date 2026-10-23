@@ -139,12 +139,17 @@ function speak(text, lang) {
     u.rate = 0.95;
     setMode("speaking");
     lastSpoken = text;
-    u.onend = u.onerror = () => {
+    let finished = false;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
       setMode("idle");
       spokeUntil = Date.now() + 800; // ignore the echo of Partner's own voice for a moment
       if (handsFree) hfAwake = Date.now() + FOLLOW_UP_MS; // the user can reply without saying "Partner" again
       resolve();
     };
+    u.onend = u.onerror = finish;
+    setTimeout(finish, 4000 + text.length * 90); // some Android voices never fire "end"
     speechSynthesis.speak(u);
   });
 }
@@ -155,7 +160,7 @@ const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognizer = null;
 
 function listen() {
-  if (handsFree) { hfAwake = Date.now() + 10000; setMode("listening"); vibrate(60); return; } // already listening
+  if (handsFree) { startHandsFree(); hfAwake = Date.now() + 10000; setMode("listening"); vibrate(60); return; } // already listening
   if (state.busy) return;
   if (!Recognition) { toast(tr("needChrome")); $("typeInput").focus(); return; }
   if (recognizer) { recognizer.stop(); return; }
@@ -264,12 +269,17 @@ async function handleUtterance(text) {
       else { $("camShare").classList.add("hidden"); speak(tr("camKept"), state.lang); }
       return;
     }
-    if (pending.kind === "scheduled" && short && (YES.test(said) || NO.test(said))) {
+    if (pending.kind === "scheduled" && !(short && (YES.test(said) || NO.test(said)))) {
+      speak(tr("sayYesNo"), state.lang).then(() => listen()); // never lose the midnight message
+      return;
+    }
+    if (pending.kind === "scheduled") {
       state.pending = null;
       if (YES.test(said)) {
         $("reply").textContent = tr("okText");
         await speak(tr("okText"), state.lang);
-        await sendWhatsApp(pending.s.phone, pending.s.text, pending.who);
+        if (pcHelper) await sendWhatsApp(pending.s.phone, pending.s.text, pending.who);
+        else showTapScreen(`💬 WhatsApp: ${pending.who}`, () => sendWhatsApp(pending.s.phone, pending.s.text, pending.who), false, tr("tapWhatsApp", { who: pending.who }));
       } else {
         goHome(); // WhatsApp was never opened, so nothing is left typed anywhere
         $("reply").textContent = tr("cancelText");
@@ -297,6 +307,7 @@ async function handleUtterance(text) {
     }
     state.pending = null; // anything else: let the AI understand the new sentence
   }
+  if (state.busy) return; // still answering the previous command
   state.busy = true;
   $("youSaid").textContent = "“" + text + "”";
   $("reply").textContent = "";
@@ -305,7 +316,7 @@ async function handleUtterance(text) {
   vibrate([30, 60, 30]);
 
   // "Read this message" by voice: try the clipboard first.
-  if (!state.sharedText && /vanch|vaanch|padh|read|samjav|fraud|message|sms/i.test(text)) {
+  if (!state.sharedText && /(vanch|vaanch|padh|read|samjav|explain|fraud|scam|વાંચ|સમજાવ|ફ્રોડ|पढ़|समझा|फ्रॉड)/i.test(text) && !/(send|mokal|bhej|whatsapp|sms kar|મોકલ|भेज)/i.test(text)) {
     try { state.sharedText = (await navigator.clipboard.readText()) || ""; } catch { /* no clipboard permission */ }
   }
 
@@ -634,6 +645,7 @@ async function runAction(r) {
       break;
     }
     case "cancel_schedule": {
+      if (!r.contact_id && state.scheduled.length > 1) { speak(tr("whichCancel"), state.lang).then(() => listen()); return; }
       state.scheduled = r.contact_id ? state.scheduled.filter((s) => s.contact_id !== r.contact_id) : [];
       save("bolo.scheduled", state.scheduled);
       keepAwake();
@@ -785,7 +797,9 @@ async function openCamera(facing, timer, shareTo = camShareTo) {
   stopCamera();
   camBlob = await new Promise((res) => canvas.toBlob(res, "image/jpeg", 0.92));
   camTakenAt = Date.now();
+  if (photo.src.startsWith("blob:")) URL.revokeObjectURL(photo.src);
   photo.src = URL.createObjectURL(camBlob);
+  startHandsFree(); // the camera is done - listen again, e.g. for "yes, send it"
   photo.classList.remove("hidden"); video.classList.add("hidden");
   const a = document.createElement("a"); // saved to the phone's Downloads / gallery
   a.href = photo.src; a.download = `Partner-photo-${localIso().replace(/[ :]/g, "-")}.jpg`; a.click();
@@ -993,7 +1007,8 @@ $("contactForm").onsubmit = (e) => {
   const data = Object.fromEntries(["name", "relation", "city", "phone", "email", "birthday"].map((k) => [k, f.elements[k].value.trim()]));
   data.emergency = f.elements.emergency.checked;
   const id = f.elements.id.value;
-  if (id) Object.assign(contactById(id), data);
+  if (id && contactById(id)) Object.assign(contactById(id), data);
+  else if (id) state.contacts.push({ id, ...data });
   else state.contacts.push({ id: "c" + Date.now(), ...data });
   save("bolo.contacts", state.contacts);
   f.reset(); f.elements.id.value = "";
@@ -1348,7 +1363,7 @@ setLanguage(state.lang).then(() => {
 });
 // Always run the newest Partner: compare with the live version and, if this copy is old,
 // clear the saved copy and reload once.
-const APP_VERSION = "2026.10.24-18";
+const APP_VERSION = "2026.10.24-19";
 fetch("version.json", { cache: "no-store" }).then((r) => r.json()).then(async ({ version }) => {
   if (!version || version === APP_VERSION || sessionStorage.getItem("bolo.reloadedFor") === version) return;
   sessionStorage.setItem("bolo.reloadedFor", version);
