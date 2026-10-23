@@ -1,4 +1,4 @@
-# Friction log – building Saathi (Amazon Developer Hackathon 2026)
+# Friction log – building Partner (Amazon Developer Hackathon 2026)
 
 | # | What I tried | Expected | Actual | Severity | Workaround | Suggestion |
 |---|---|---|---|---|---|---|

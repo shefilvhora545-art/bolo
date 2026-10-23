@@ -1,6 +1,6 @@
-# Saathi – your voice partner for people who can't use a smartphone screen
+# Partner – a voice assistant for people who can't use a smartphone screen
 
-**Saathi** (Gujarati સાથી / Hindi साथी / Urdu ساتھی – *"partner, companion"*) is a simulated **Alexa+** experience for elders, people who cannot read and people with weak eyesight. They don't tap through apps; they just talk, in **Gujarati, Hindi, English** or 18 other languages, and Saathi does the job.
+**Partner** – the voice assistant you call like a friend: is a simulated **Alexa+** experience for elders, people who cannot read and people with weak eyesight. They don't tap through apps; they just talk, in **Gujarati, Hindi, English** or 18 other languages, and Partner does the job.
 
 > 🔗 **Live demo:** https://bolo-voice-assistant.vercel.app (open in Google Chrome, allow the microphone)
 > Built for the **Build, Ship, Shape: Amazon Developer Hackathon 2026** – Alexa+ track (simulated Alexa+ experience) + Open Source mini challenge.
@@ -8,8 +8,8 @@
 ## The problem
 Hundreds of millions of people in India own a smartphone but cannot really *use* it: the screen is in English, the text is small, and every task needs many taps. Normal assistants also don't understand how Indian families talk – *"mara Anish kaka ne call lagav"* ("call my Anish uncle") means nothing to them when there are two Anish uncles, one in Nadiad and one in Ahmedabad.
 
-## What Saathi does
-| You say | Saathi does |
+## What Partner does
+| You say | Partner does |
 |---|---|
 | "મારા અનીશ કાકા ને કોલ લગાવ" | Finds **two** Anish kakas and asks *"Nadiad vala ke Ahmedabad vala?"*, then calls the right one – and **remembers** your choice next time |
 | "Shad bhai ne call kar" | Only one Shad → calls straight away |
@@ -22,7 +22,7 @@ Hundreds of millions of people in India own a smartphone but cannot really *use*
 | "Make me a calculator website" | Code mode: writes the code, shows a live preview, copy/download |
 
 ### Designed for people who can't use a screen
-- **Hands-free mode** – say *"Saathi, …"*; no tapping at all. When Saathi asks a question, just answer.
+- **Hands-free mode** – say *"Partner, …"*; no tapping at all. When Partner asks a question, just answer.
 - **Tap anywhere to talk** – the whole screen is one big button; everything is spoken back; the phone vibrates.
 - **Smart safety** – easy tasks just happen; sending a message waits for a spoken *"ha / yes"*; hard tasks (scheduled messages, unknown email addresses) get a full read-back first; SOS never waits. The app enforces these rules itself, whatever the AI says.
 - **Understands Indian family words** – kaka, kaki, mama, mami, fai, masi, dada, ba, bhai, ben, chacha, bua, mausi… plus "Nadiad vala" (the one from Nadiad).
@@ -61,8 +61,8 @@ Deploy: `vercel deploy --prod` and add the same key(s) as Vercel environment var
 Vanilla HTML/CSS/JS (no framework), Web Speech API, Screen Wake Lock API, Node.js, Vercel serverless functions, Anthropic SDK (`@anthropic-ai/sdk`, structured JSON output) with Google Gemini as a free fallback.
 
 ## Honest limits
-- A website can't press the final **Call/Send** button inside another app or unlock the phone – the phone requires one tap there (on a PC with WhatsApp Desktop, Saathi can send by itself).
-- Scheduled messages need Saathi open (the screen is kept awake in night mode).
+- A website can't press the final **Call/Send** button inside another app or unlock the phone – the phone requires one tap there (on a PC with WhatsApp Desktop, Partner can send by itself).
+- Scheduled messages need Partner open (the screen is kept awake in night mode).
 - Voice recognition quality depends on Chrome's speech engine; Gujarati works best on Android.
 
 ## License
