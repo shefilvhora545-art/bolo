@@ -238,3 +238,7 @@ main#stage > * { max-width: 720px; }
 .pulse { animation: pulse-btn 1s ease-in-out infinite; }
 @keyframes pulse-btn { 50% { transform: scale(1.04); box-shadow: 0 0 0 8px #16a34a33; } }
 .fcard .soon { display: inline-block; font-size: 11px; font-weight: 700; color: var(--muted); background: var(--surface-2); border-radius: 6px; padding: 2px 6px; margin-left: auto; }
+
+/* never squeeze the texts in the scrolling middle area (they overlapped on small phones) */
+main#stage > * { flex-shrink: 0; }
+.you { line-height: 1.4; }

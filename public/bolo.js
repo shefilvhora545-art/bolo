@@ -181,6 +181,16 @@ function listen() {
 // ---------- hands-free: say "Partner ..." - no tapping at all ----------
 let handsFree = load("bolo.handsfree", false);
 let hfRec = null, hfAwake = 0, spokeUntil = 0, lastSpoken = "";
+let hfBuffer = "", hfTimer = null; // pieces of one sentence, sent after a pause
+function waitForMore() {
+  clearTimeout(hfTimer);
+  const words = hfBuffer.split(/\s+/).filter(Boolean).length;
+  hfTimer = setTimeout(() => {
+    const command = hfBuffer.trim();
+    hfBuffer = ""; hfTimer = null;
+    if (command) { hfAwake = 0; handleUtterance(command); }
+  }, words < 3 ? 2500 : 1500);
+}
 const WAKE = /^(hey |ok |hi |hello |he )?(partner|partnar|patner|pardner|partner ji|પાર્ટનર|પાટનર|पार्टनर|पाटनर|پارٹنر)(?=$|[\s,.!?])[\s,.!?]*/i;
 function renderHandsFree() {
   $("hfBtn").classList.toggle("on", handsFree);
@@ -198,14 +208,23 @@ function startHandsFree() {
     const r = e.results[e.results.length - 1];
     const heard = r[0].transcript.trim();
     const awake = Date.now() < hfAwake;
-    if (!r.isFinal) { if (awake || WAKE.test(heard)) $("youSaid").textContent = "“" + heard + "”"; return; }
+    if (!r.isFinal) { // still speaking: show it and keep waiting
+      if (awake || hfBuffer || WAKE.test(heard)) {
+        $("youSaid").textContent = "“" + (hfBuffer + " " + heard.replace(WAKE, "")).trim() + "”";
+        if (hfTimer) waitForMore();
+      }
+      return;
+    }
     if (lastSpoken && heard.length > 6 && lastSpoken.toLowerCase().includes(heard.toLowerCase().slice(0, 12))) return; // own echo
     let command = heard;
     if (WAKE.test(command)) command = command.replace(WAKE, "").trim();
-    else if (!awake) return;
-    if (!command) { hfAwake = Date.now() + 8000; setMode("listening"); vibrate(60); return; } // just "Partner": waiting
-    hfAwake = 0;
-    handleUtterance(command);
+    else if (!awake && !hfBuffer) return;
+    if (!command && !hfBuffer) { hfAwake = Date.now() + 8000; setMode("listening"); vibrate(60); return; } // just "Partner": waiting
+    // Android cuts a sentence at every small pause - collect the pieces until the person really stops.
+    hfBuffer = (hfBuffer + " " + command).trim();
+    $("youSaid").textContent = "“" + hfBuffer + "”";
+    setMode("listening");
+    waitForMore();
   };
   hfRec.onerror = (e) => {
     if (e.error === "not-allowed") { handsFree = false; save("bolo.handsfree", false); renderHandsFree(); toast(tr("allowMicHf")); }
