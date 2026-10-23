@@ -596,7 +596,7 @@ function fireScheduled() {
 }
 setInterval(fireScheduled, 1000);
 
-// At the scheduled time Partner asks "Ha ke na?". Ha -> send. Na -> delete it and go back to Partner's home screen.
+// At the scheduled time Partner asks "yes or no?". Yes -> send. No -> delete it and go back to Partner's home screen.
 const askQueue = [];
 function askScheduled(s) {
   askQueue.push(s);
