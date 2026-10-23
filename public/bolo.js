@@ -60,6 +60,10 @@ function defaultLang() {
 }
 
 
+// iPhone / iPad (iPadOS also reports itself as a Mac with touch).
+const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const IS_STANDALONE = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+
 // ---------- UI state ----------
 const RING_ICONS = {
   idle: '<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>',
@@ -549,8 +553,8 @@ async function runAction(r) {
       if (!target) return;
       if (target.uninstall) { uninstallPartner(); return; } // ask yes / no first, then Android's uninstall screen
       if (target.install) { // Chrome shows its install prompt only after a real tap
-        const installed = matchMedia("(display-mode: standalone)").matches;
-        if (installed) { toast(tr("installed")); return; }
+        if (IS_STANDALONE) { toast(tr("installed")); return; }
+        if (IS_IOS) { iosInstallHelp(); return; }
         if (!installPrompt) { toast(tr("installHelp")); speak(tr("installHelp"), state.lang); return; }
         showTapScreen("📲 " + tr("pInstall"), async () => {
           installPrompt.prompt();
@@ -560,6 +564,7 @@ async function runAction(r) {
         }, false, tr("tapInstall"));
         return;
       }
+      if (target.androidOnly && IS_IOS) { showInfo(target.icon, target.name, tr("iosSettings", { app: target.name })); return; }
       if (target.androidOnly && !/android/i.test(navigator.userAgent)) { toast(tr("androidSettings")); return; }
       toast(tr("opening", { app: target.name }));
       confirmAction(`${target.icon} ${target.name}${r.app_query ? ": " + r.app_query : ""}`, target.url, false,
@@ -700,7 +705,9 @@ function appTarget(app, query = "") {
     google: { name: "Google", icon: "🔎", url: `https://www.google.com/search?q=${q}` },
     maps: { name: "Google Maps", icon: "🗺️", url: `https://www.google.com/maps/search/?api=1&query=${q}` },
     maps_directions: { name: "Google Maps", icon: "🧭", url: `https://www.google.com/maps/dir/?api=1&destination=${q}` },
-    play_store: { name: "Play Store", icon: "🛍️", url: `https://play.google.com/store/search?q=${q}&c=apps` },
+    play_store: IS_IOS
+      ? { name: "App Store", icon: "🛍️", url: `itms-apps://search.itunes.apple.com/WebObjects/MZSearch.woa/wa/search?media=software&term=${q}` }
+      : { name: "Play Store", icon: "🛍️", url: `https://play.google.com/store/search?q=${q}&c=apps` },
     netflix: { name: "Netflix", icon: "🎬", url: q ? `https://www.netflix.com/search?q=${q}` : "https://www.netflix.com/" },
     prime_video: { name: "Prime Video", icon: "🎬", url: q ? `https://www.primevideo.com/search/?phrase=${q}` : "https://www.primevideo.com/" },
     instagram: { name: "Instagram", icon: "📷", url: "https://www.instagram.com/" },
@@ -1002,7 +1009,7 @@ function addContacts(people) {
 
 // "Choose contacts": the phone's own picker (Chrome on Android) - the user ticks only the people needed.
 $("importPhone").onclick = async () => {
-  if (!("contacts" in navigator && "select" in navigator.contacts)) { toast(tr("importNeedsChrome")); return; }
+  if (!("contacts" in navigator && "select" in navigator.contacts)) { if (IS_IOS) showInfo("📱", tr("pContacts"), tr("iosContacts")); else toast(tr("importNeedsChrome")); return; }
   toast(tr("pickerTip"));
   try {
     const picked = await navigator.contacts.select(["name", "tel", "email"], { multiple: true });
@@ -1111,7 +1118,7 @@ async function renderSetup() {
     row.classList.toggle("ok", allowed && st === "granted");
     row.querySelector(".blocked").classList.toggle("hidden", !(choice !== false && st === "denied"));
   }
-  markInstall(matchMedia("(display-mode: standalone)").matches || load("bolo.installed", false));
+  markInstall(IS_STANDALONE || load("bolo.installed", false));
 }
 function openSetup() { $("family").classList.add("hidden"); $("setup").classList.remove("hidden"); $("appVersion").textContent = "Partner v" + APP_VERSION; renderSetup(); }
 
@@ -1124,11 +1131,15 @@ async function requestPerm(id) {
       st.getTracks().forEach((tk) => tk.stop());
       return true;
     }
-    if (id === "permNotif") return "Notification" in window && (await Notification.requestPermission()) === "granted";
+    if (id === "permNotif") {
+      if (IS_IOS && !IS_STANDALONE) { await showInfo("🔔", tr("pNotif"), tr("iosNotif")); return false; }
+      return "Notification" in window && (await Notification.requestPermission()) === "granted";
+    }
     if (id === "permLocation") return await new Promise((res) => navigator.geolocation ? navigator.geolocation.getCurrentPosition(() => res(true), () => res(false), { timeout: 10000 }) : res(false));
     if (id === "permContacts") {
       if ("contacts" in navigator && "select" in navigator.contacts) { await $("importPhone").onclick(); return true; }
-      $("setup").classList.add("hidden"); renderFamily(); $("family").classList.remove("hidden"); toast(tr("importNeedsChrome"));
+      $("setup").classList.add("hidden"); renderFamily(); $("family").classList.remove("hidden");
+      if (IS_IOS) showInfo("📱", tr("pContacts"), tr("iosContacts")); else toast(tr("importNeedsChrome"));
       return true;
     }
   } catch { /* blocked or cancelled */ }
@@ -1170,7 +1181,8 @@ $("pickAll").onclick = () => $("importAll").onclick();
 // Install: the phone's own install prompt. Uninstall: no app can remove itself, so Partner shows and says the steps.
 $("permInstall").querySelectorAll('input[type="radio"]').forEach((radio) => (radio.onchange = async () => {
   if (radio.value === "install") {
-    if (installPrompt) { installPrompt.prompt(); const c = await installPrompt.userChoice; if (c.outcome === "accepted") save("bolo.installed", true); installPrompt = null; }
+    if (IS_IOS && !IS_STANDALONE) await iosInstallHelp();
+    else if (installPrompt) { installPrompt.prompt(); const c = await installPrompt.userChoice; if (c.outcome === "accepted") save("bolo.installed", true); installPrompt = null; }
     else toast(tr("installHelp"));
   } else {
     await uninstallPartner();
@@ -1221,10 +1233,29 @@ function askYesNo(icon, title, question) {
     speak(question, state.lang).then(() => { if (state.pending?.kind === "ask") listen(); });
   });
 }
+// Information pop-up with a single OK button, also read aloud.
+function showInfo(icon, title, text) {
+  return new Promise((resolve) => {
+    $("askIcon").textContent = icon; $("askTitle").textContent = title; $("askText").textContent = text;
+    $("askNo").classList.add("hidden");
+    $("askYes").textContent = tr("ok");
+    $("ask").classList.remove("hidden");
+    $("askYes").onclick = (e) => {
+      e.stopPropagation();
+      $("ask").classList.add("hidden"); $("askNo").classList.remove("hidden"); $("askYes").textContent = tr("yes");
+      speechSynthesis.cancel(); resolve();
+    };
+    speak(text, state.lang);
+  });
+}
+// Install on iPhone: Safari has no install button, so show and read the Share -> Add to Home Screen steps.
+function iosInstallHelp() { return showInfo("📲", tr("iosInstallTitle"), tr("iosInstall")); }
+
 // Uninstall: ask first, then open Android's own uninstall screen (Android always asks for its final OK).
 async function uninstallPartner() {
   if (!(await askYesNo("🗑️", tr("uninstallTitle"), tr("uninstallAsk")))) { speak(tr("cancelText"), state.lang); return; }
   save("bolo.installed", false);
+  if (IS_IOS) { showInfo("🗑️", tr("uninstallTitle"), tr("iosUninstall")); return; }
   if (!/android/i.test(navigator.userAgent)) { toast(tr("uninstallHelp")); speak(tr("uninstallHelp"), state.lang); return; }
   await speak(tr("uninstallGo"), state.lang);
   window.location.href = "intent:#Intent;action=android.settings.MANAGE_APPLICATIONS_SETTINGS;end";
@@ -1275,7 +1306,7 @@ renderHandsFree();
 startHandsFree();
 // Microphone already allowed (and not switched off by the user) -> always listening for "Partner" from the start.
 permState("microphone").then((st) => {
-  if (st === "granted" && Recognition && !handsFree && state.settings.listen !== false) {
+  if (st === "granted" && Recognition && !handsFree && state.settings.listen !== false && !IS_IOS) {
     handsFree = true; save("bolo.handsfree", true); renderHandsFree(); startHandsFree();
   }
 });
@@ -1292,7 +1323,7 @@ setLanguage(state.lang).then(() => {
 });
 // Always run the newest Partner: compare with the live version and, if this copy is old,
 // clear the saved copy and reload once.
-const APP_VERSION = "2026.10.23-15";
+const APP_VERSION = "2026.10.23-16";
 fetch("version.json", { cache: "no-store" }).then((r) => r.json()).then(async ({ version }) => {
   if (!version || version === APP_VERSION || sessionStorage.getItem("bolo.reloadedFor") === version) return;
   sessionStorage.setItem("bolo.reloadedFor", version);
