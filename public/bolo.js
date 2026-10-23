@@ -30,6 +30,7 @@ const state = {
   scheduled: load("bolo.scheduled", []), // [{ id, at, contact_id, phone, text, channel }]
   verification: load("bolo.verification", "smart"), // smart | two-step | one-step | off
   pending: null, // an action waiting for "ha / yes"
+  settings: { notify: true, location: true, ...load("bolo.settings", {}) }, // user on/off switches
   history: [],
   sharedText: "",
   busy: false,
@@ -94,6 +95,7 @@ function renderLang() {
   document.documentElement.lang = state.lang.split("-")[0];
   document.documentElement.dir = /^(ur|ar)/.test(state.lang) ? "rtl" : "ltr";
   if (statusProvider !== null) showStatus();
+  renderNight();
 }
 
 // Switch the whole screen to a language (AI-translated once for languages beyond gu/hi/en).
@@ -212,8 +214,10 @@ $("hfBtn").onclick = (e) => {
   e.stopPropagation();
   if (!Recognition) { toast(tr("hfChrome")); return; }
   handsFree = !handsFree;
-  save("bolo.handsfree", handsFree);
+  state.settings.listen = handsFree;
+  save("bolo.handsfree", handsFree); save("bolo.settings", state.settings);
   renderHandsFree();
+  renderSetup();
   if (handsFree) { startHandsFree(); speak(tr("hfHint"), state.lang); } else stopHandsFree();
 };
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && handsFree) startHandsFree(); });
@@ -352,7 +356,7 @@ async function handleUtterance(text) {
 const FOLLOW_UP_MS = 8000;
 let followTimer = null;
 function followUpListen() {
-  if (document.visibilityState !== "visible" || !Recognition) return;
+  if (document.visibilityState !== "visible" || !Recognition || state.settings.listen === false) return;
   clearTimeout(followTimer);
   if (handsFree) {
     hfAwake = Date.now() + FOLLOW_UP_MS;
@@ -486,12 +490,13 @@ async function runAction(r) {
       save("bolo.scheduled", state.scheduled);
       card.appendChild(el(`<div class="card"><h3>⏰ ${esc(at.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }))} → ${esc(label(c) || phone)}</h3>
         <p>${esc(r.message_text)}</p><p class="meta">${esc(tr("schedNote"))}</p></div>`));
-      keepAwake();
+      keepAwake(true);
       break;
     }
     case "cancel_schedule": {
       state.scheduled = r.contact_id ? state.scheduled.filter((s) => s.contact_id !== r.contact_id) : [];
       save("bolo.scheduled", state.scheduled);
+      keepAwake();
       break;
     }
   }
@@ -531,7 +536,7 @@ function showTapScreen(text, url, danger = false) {
 
 function sendSosWhatsApp(c) {
   const target = c || state.contacts.find((x) => x.emergency);
-  if (!target || !navigator.geolocation) return;
+  if (!target || !navigator.geolocation || !state.settings.location) return; // the call still happens
   navigator.geolocation.getCurrentPosition(
     (pos) => {
       const link = `https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`;
@@ -575,14 +580,23 @@ function parseLocal(s) { // "YYYY-MM-DD HH:MM" -> Date in the phone's time zone
   return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]) : null;
 }
 let wakeLock = null;
-async function keepAwake() { // Night mode: stop the screen from sleeping while something is scheduled
+// Night mode: keep the screen awake only while a message is scheduled in the next 24 hours.
+// The pop-up is shown once, when a message is scheduled; after that a small 🌙 badge shows it is on.
+async function keepAwake(announce = false) {
+  const soon = state.scheduled.some((s) => s.at - Date.now() < 24 * 3600 * 1000);
   try {
-    if ("wakeLock" in navigator && !wakeLock && state.scheduled.length) {
+    if (!soon && wakeLock) { await wakeLock.release(); wakeLock = null; }
+    if (soon && "wakeLock" in navigator && !wakeLock) {
       wakeLock = await navigator.wakeLock.request("screen");
-      wakeLock.addEventListener("release", () => (wakeLock = null));
-      toast(tr("nightOn"));
+      wakeLock.addEventListener("release", () => { wakeLock = null; renderNight(); });
     }
   } catch { /* battery saver can refuse; the timer still works while the screen is on */ }
+  if (announce && soon) toast(tr("nightOn"));
+  renderNight();
+}
+function renderNight() {
+  $("nightBadge").classList.toggle("hidden", !state.scheduled.length);
+  $("nightBadge").title = tr("nightOn");
 }
 document.addEventListener("visibilitychange", () => document.visibilityState === "visible" && keepAwake());
 
@@ -592,6 +606,7 @@ function fireScheduled() {
   if (!due.length) return;
   state.scheduled = state.scheduled.filter((s) => s.at > now);
   save("bolo.scheduled", state.scheduled);
+  keepAwake();
   due.forEach((s) => askScheduled(s));
 }
 setInterval(fireScheduled, 1000);
@@ -700,7 +715,7 @@ function renderFamily() {
   $("scheduledList").innerHTML = state.scheduled.length ? "" : "<li>—</li>";
   state.scheduled.forEach((sc) => {
     const li = el(`<li>${new Date(sc.at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })} → ${esc(label(contactById(sc.contact_id)) || sc.phone)}: ${esc(sc.text)} <button title="${esc(tr("cancelTitle"))}">✖</button></li>`);
-    li.querySelector("button").onclick = () => { state.scheduled = state.scheduled.filter((x) => x.id !== sc.id); save("bolo.scheduled", state.scheduled); renderFamily(); };
+    li.querySelector("button").onclick = () => { state.scheduled = state.scheduled.filter((x) => x.id !== sc.id); save("bolo.scheduled", state.scheduled); keepAwake(); renderFamily(); };
     $("scheduledList").appendChild(li);
   });
   $("reminderList").innerHTML = state.reminders.length ? "" : "<li>—</li>";
@@ -818,7 +833,7 @@ $("btnSos").onclick = (e) => {
 // ---------- first-run setup: language + permissions ----------
 async function notify(title, body) { // a phone notification, also when Partner is in the background
   try {
-    if (!("Notification" in window) || Notification.permission !== "granted") return;
+    if (!state.settings.notify || !("Notification" in window) || Notification.permission !== "granted") return;
     const reg = "serviceWorker" in navigator && (await navigator.serviceWorker.getRegistration());
     if (reg) reg.showNotification(title, { body, icon: "icons/icon-192.png", badge: "icons/icon-192.png", vibrate: [300, 100, 300] });
     else new Notification(title, { body, icon: "icons/icon-192.png" });
@@ -839,8 +854,18 @@ function markPerm(id, status) { // status: "ok" | "no" | ""
 async function permState(name) {
   try { return (await navigator.permissions.query({ name })).state; } catch { return "prompt"; }
 }
+function setSwitch(rowId, checked, labelKey) {
+  const sw = $(rowId).querySelector(".switch");
+  if (!sw) return;
+  sw.querySelector("input").checked = checked;
+  sw.title = tr(labelKey);
+  sw.querySelector("input").setAttribute("aria-label", tr(labelKey));
+}
 async function renderSetup() {
   if ($("setup").classList.contains("hidden")) return;
+  setSwitch("permMic", handsFree, "switchMic");
+  setSwitch("permNotif", state.settings.notify, "switchNotif");
+  setSwitch("permLocation", state.settings.location, "switchLoc");
   document.querySelectorAll("[data-setlang]").forEach((b) => b.classList.toggle("on", b.dataset.setlang === state.lang));
   const mic = await permState("microphone");
   markPerm("permMic", mic === "granted" ? "ok" : mic === "denied" ? "no" : "");
@@ -854,11 +879,27 @@ async function renderSetup() {
 }
 function openSetup() { $("family").classList.add("hidden"); $("setup").classList.remove("hidden"); renderSetup(); }
 
+function saveSettings() { save("bolo.settings", state.settings); }
+$("permMic").querySelector(".switch input").onchange = (e) => {
+  handsFree = e.target.checked;
+  state.settings.listen = e.target.checked;
+  save("bolo.handsfree", handsFree); saveSettings();
+  renderHandsFree();
+  if (handsFree) startHandsFree(); else { stopHandsFree(); toast(tr("listenOff")); }
+};
+$("permNotif").querySelector(".switch input").onchange = (e) => {
+  state.settings.notify = e.target.checked; saveSettings();
+  if (!e.target.checked) toast(tr("notifOff"));
+};
+$("permLocation").querySelector(".switch input").onchange = (e) => {
+  state.settings.location = e.target.checked; saveSettings();
+  if (!e.target.checked) toast(tr("locOff"));
+};
 $("permMic").querySelector("button").onclick = async () => {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     stream.getTracks().forEach((tk) => tk.stop());
-    if (Recognition && !handsFree) { handsFree = true; save("bolo.handsfree", true); renderHandsFree(); } // always listening for "Partner"
+    if (Recognition && !handsFree && state.settings.listen !== false) { handsFree = true; save("bolo.handsfree", true); renderHandsFree(); } // always listening for "Partner"
   } catch { toast(tr("blockedHelp")); }
   renderSetup();
 };
@@ -889,6 +930,7 @@ $("setupDone").onclick = () => {
   if (handsFree) { startHandsFree(); speak(tr("hfHint"), state.lang); }
 };
 $("openSetup").onclick = openSetup;
+$("settingsBtn").onclick = (e) => { e.stopPropagation(); openSetup(); };
 
 // ---------- wiring ----------
 $("stage").addEventListener("click", (e) => {
@@ -925,7 +967,17 @@ setLanguage(state.lang).then(() => {
   if (q.get("sos") === "1") $("btnSos").click();
   else if (q.get("talk") === "1") listen();
 });
-if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+// Installed apps update themselves: check for a new version on every open and switch to it right away.
+if ("serviceWorker" in navigator) {
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then((reg) => reg.update()).catch(() => {});
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!hadController || reloaded || state.busy) return; // first install: nothing to reload
+    reloaded = true;
+    location.reload();
+  });
+}
 keepAwake();
 
 // Direct link to the family screen: open Partner with #family

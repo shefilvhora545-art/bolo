@@ -21,6 +21,8 @@
       <span class="logo" aria-hidden="true"></span>
       <div><b>Partner</b><small data-i18n="brandSub">Your voice partner</small></div>
       <span class="status" id="status"><i></i> <span id="statusText" data-i18n="online">Online</span></span>
+      <span class="status hidden" id="nightBadge">🌙</span>
+      <button class="hf" id="settingsBtn" data-i18n-title="settings" title="Settings">⚙️</button>
       <button class="hf" id="hfBtn" data-i18n-title="hfTitle" title="Hands-free: say “Partner” and your request">🎙 <span id="hfText">Hands-free</span></button>
     </div>
     <div class="langs" id="langs">
@@ -134,10 +136,10 @@
         <button data-setlang="mr-IN" class="chip">मराठी</button>
         <button data-setlang="ur-IN" class="chip">اردو</button>
       </div>
-      <div class="perm" id="permMic"><span class="pi">🎤</span><div><b data-i18n="pMic">Microphone</b><small data-i18n="pMicHelp">So Partner can hear you – always listening for “Partner” while open</small></div><button class="primary" data-i18n="allow">Allow</button></div>
-      <div class="perm" id="permNotif"><span class="pi">🔔</span><div><b data-i18n="pNotif">Notifications</b><small data-i18n="pNotifHelp">Reminders and midnight birthday wishes, even when the screen is busy</small></div><button class="primary" data-i18n="allow">Allow</button></div>
+      <div class="perm" id="permMic"><span class="pi">🎤</span><div><b data-i18n="pMic">Microphone</b><small data-i18n="pMicHelp">So Partner can hear you – always listening for “Partner” while open</small></div><button class="primary" data-i18n="allow">Allow</button><label class="switch" title=""><input type="checkbox"><span></span></label></div>
+      <div class="perm" id="permNotif"><span class="pi">🔔</span><div><b data-i18n="pNotif">Notifications</b><small data-i18n="pNotifHelp">Reminders and midnight birthday wishes, even when the screen is busy</small></div><button class="primary" data-i18n="allow">Allow</button><label class="switch" title=""><input type="checkbox"><span></span></label></div>
       <div class="perm" id="permContacts"><span class="pi">📱</span><div><b data-i18n="pContacts">Contacts</b><small data-i18n="pContactsHelp">Pick your family from the phone's contacts (Mummy, Ammi, Bhai…)</small></div><div class="perm-btns"><button class="primary" id="pickSome" data-i18n="pickSome">Choose contacts</button><button class="ghost" id="pickAll" data-i18n="pickAll">All contacts</button></div></div>
-      <div class="perm" id="permLocation"><span class="pi">📍</span><div><b data-i18n="pLocation">Location</b><small data-i18n="pLocationHelp">Only sent to your family when you press SOS</small></div><button class="primary" data-i18n="allow">Allow</button></div>
+      <div class="perm" id="permLocation"><span class="pi">📍</span><div><b data-i18n="pLocation">Location</b><small data-i18n="pLocationHelp">Only sent to your family when you press SOS</small></div><button class="primary" data-i18n="allow">Allow</button><label class="switch" title=""><input type="checkbox"><span></span></label></div>
       <div class="perm" id="permInstall"><span class="pi">📲</span><div><b data-i18n="pInstall">Install Partner app</b><small data-i18n="pInstallHelp">Icon on your home screen – long-press it for Talk and SOS shortcuts</small></div><button class="primary" data-i18n="install">Install</button></div>
       <button id="setupDone" class="big" data-i18n="startUsing">Start using Partner</button>
     </div>

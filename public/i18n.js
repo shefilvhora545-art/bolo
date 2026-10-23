@@ -78,6 +78,8 @@ const STRINGS = {
     pickerTip: "Tip: tick the people you need – or “Select all” at the top if your phone shows it.",
     vcfHelp: "To add all contacts: Contacts app → ⋮ → Export (.vcf file), then choose that file here.",
     importedNone: "No new contacts found in that file.",
+    settings: "Settings", switchMic: "Always listening for “Partner”", switchNotif: "Show notifications", switchLoc: "Share my location in SOS",
+    listenOff: "Partner listens only when you tap.", notifOff: "Notifications are off.", locOff: "SOS will call without sharing your location.",
   },
 
   gu: {
@@ -155,6 +157,8 @@ const STRINGS = {
     pickerTip: "ટીપ: જરૂરી લોકો પર ટિક કરો – અથવા ઉપર “Select all” દેખાય તો તે દબાવો.",
     vcfHelp: "બધા સંપર્કો માટે: Contacts એપ → ⋮ → Export (.vcf ફાઇલ), પછી તે ફાઇલ અહીં પસંદ કરો.",
     importedNone: "આ ફાઇલમાં કોઈ નવો સંપર્ક મળ્યો નહીં.",
+    settings: "સેટિંગ્સ", switchMic: "“પાર્ટનર” માટે હંમેશાં સાંભળે", switchNotif: "નોટિફિકેશન બતાવો", switchLoc: "SOS માં મારું લોકેશન મોકલો",
+    listenOff: "હવે પાર્ટનર ફક્ત તમે દબાવો ત્યારે જ સાંભળશે.", notifOff: "નોટિફિકેશન બંધ છે.", locOff: "SOS લોકેશન વગર કોલ કરશે.",
   },
 
   hi: {
@@ -232,6 +236,8 @@ const STRINGS = {
     pickerTip: "टिप: ज़रूरी लोगों पर टिक करें – या ऊपर “Select all” दिखे तो उसे दबाएं।",
     vcfHelp: "सभी संपर्कों के लिए: Contacts ऐप → ⋮ → Export (.vcf फ़ाइल), फिर वह फ़ाइल यहाँ चुनें।",
     importedNone: "इस फ़ाइल में कोई नया संपर्क नहीं मिला।",
+    settings: "सेटिंग्स", switchMic: "“पार्टनर” के लिए हमेशा सुने", switchNotif: "नोटिफ़िकेशन दिखाएं", switchLoc: "SOS में मेरी लोकेशन भेजें",
+    listenOff: "अब पार्टनर सिर्फ़ आपके दबाने पर सुनेगा।", notifOff: "नोटिफ़िकेशन बंद हैं।", locOff: "SOS बिना लोकेशन के कॉल करेगा।",
   },
 };
 

@@ -166,6 +166,17 @@ iframe.preview { width: 100%; height: 380px; border: 0; border-radius: 14px; bac
 .perm.ok button { background: transparent; border: 1px solid #34d39988; color: var(--green); }
 .perm.no button { background: transparent; border: 1px solid #fb718588; color: var(--red); }
 #setupDone { margin-top: 14px; }
+/* on/off switch shown once a permission is allowed */
+.switch { position: relative; display: none; width: 56px; height: 32px; flex-shrink: 0; cursor: pointer; }
+.perm.ok .switch { display: inline-block; }
+.perm.ok > button { display: none; }
+.switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+.switch span { position: absolute; inset: 0; border-radius: 999px; background: rgba(255,255,255,.18); transition: background .2s; }
+.switch span::before { content: ""; position: absolute; width: 24px; height: 24px; left: 4px; top: 4px; border-radius: 50%; background: #fff; transition: transform .2s; box-shadow: 0 2px 6px #0006; }
+.switch input:checked + span { background: linear-gradient(135deg, #10b981, #34d399); }
+.switch input:checked + span::before { transform: translateX(24px); }
+.switch input:focus-visible + span { outline: 2px solid var(--cyan); outline-offset: 2px; }
+#nightBadge { padding: 5px 9px; }
 .perm-btns { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
 .perm-btns button { min-width: 112px; padding: 9px 10px; font-size: 14px; }
 .perm.ok .perm-btns .primary { background: transparent; border: 1px solid #34d39988; color: var(--green); }
