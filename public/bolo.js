@@ -1046,7 +1046,7 @@ async function renderSetup() {
   }
   markInstall(matchMedia("(display-mode: standalone)").matches || load("bolo.installed", false));
 }
-function openSetup() { $("family").classList.add("hidden"); $("setup").classList.remove("hidden"); renderSetup(); }
+function openSetup() { $("family").classList.add("hidden"); $("setup").classList.remove("hidden"); $("appVersion").textContent = "Partner v" + APP_VERSION; renderSetup(); }
 
 function saveSettings() { save("bolo.settings", state.settings); }
 // Ask the phone for one permission. Returns true when it is granted.
@@ -1178,6 +1178,17 @@ setLanguage(state.lang).then(() => {
   if (q.get("sos") === "1") $("btnSos").click();
   else if (q.get("talk") === "1") listen();
 });
+// Always run the newest Partner: compare with the live version and, if this copy is old,
+// clear the saved copy and reload once.
+const APP_VERSION = "2026.10.23-8";
+fetch("version.json", { cache: "no-store" }).then((r) => r.json()).then(async ({ version }) => {
+  if (!version || version === APP_VERSION || sessionStorage.getItem("bolo.reloadedFor") === version) return;
+  sessionStorage.setItem("bolo.reloadedFor", version);
+  try { for (const k of await caches.keys()) await caches.delete(k); } catch { /* no cache storage */ }
+  try { const reg = await navigator.serviceWorker?.getRegistration(); await reg?.update(); } catch { /* no service worker */ }
+  location.reload();
+}).catch(() => { /* offline: keep this copy */ });
+
 // Installed apps update themselves: check for a new version on every open and switch to it right away.
 if ("serviceWorker" in navigator) {
   const hadController = !!navigator.serviceWorker.controller;
