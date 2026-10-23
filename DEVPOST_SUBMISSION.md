@@ -12,8 +12,8 @@ An Alexa+-style voice assistant that lets elders and people who can't read use t
 
 ## Try it out (links)
 - Demo video: https://www.youtube.com/watch?v=tN2GZXQRiMg
-- Live app: https://bolo-voice-assistant.vercel.app
-- Code: https://github.com/shefilvhora545-art/bolo
+- Live app: https://partner-voice-assistant.vercel.app
+- Code: https://github.com/shefilvhora545-art/partner-voice-assistant
 
 ## Built with
 javascript, html5, css3, node.js, vercel, web-speech-api, claude-api, anthropic-sdk, gemini-api, screen-wake-lock-api, contact-picker-api, web-notifications, pwa
@@ -91,10 +91,10 @@ A native Android app that registers as the phone's **Default digital assistant**
 3. Indian payment methods (UPI) for developer services – Nice-to-have.
 
 ## Friction log entries
-See `FRICTION_LOG.md` in the repo: https://github.com/shefilvhora545-art/bolo/blob/main/FRICTION_LOG.md
+See `FRICTION_LOG.md` in the repo: https://github.com/shefilvhora545-art/partner-voice-assistant/blob/main/FRICTION_LOG.md
 
 ## Open Source mini challenge
-- Contribution URL / project repository URL: https://github.com/shefilvhora545-art/bolo
+- Contribution URL / project repository URL: https://github.com/shefilvhora545-art/partner-voice-assistant
 - GitHub username: shefilvhora545-art
 - Description: Partner is a new MIT-licensed open-source project created during the hackathon – a voice-first assistant for elders and people who can't read, with Indian-family-aware contact resolution, app-enforced safety confirmations and a provider-agnostic AI layer (Claude with Gemini fallback). Anyone can fork it and deploy their own in minutes.
 

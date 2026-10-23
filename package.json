@@ -1,7 +1,7 @@
 {
-  "name": "bolo-voice-assistant",
+  "name": "partner-voice-assistant",
   "version": "1.0.0",
-  "description": "Bolo - a simulated Alexa+ voice assistant in Gujarati, Hindi and English for people who can't use smartphone screens",
+  "description": "Partner - a simulated Alexa+ voice assistant in Gujarati, Hindi and English for people who can't use smartphone screens",
   "type": "module",
   "scripts": {
     "start": "node server.js"
