@@ -224,7 +224,8 @@ async function handleUtterance(text) {
   if (state.pending) {
     const pending = state.pending;
     const said = text.trim().replace(/^["“]|["”.!?,]$/g, "");
-    if (pending.kind === "scheduled" && (YES.test(said) || NO.test(said))) {
+    const short = said.split(/\s+/).length <= 3; // "ha", "no", "yes please" - anything longer may be a correction
+    if (pending.kind === "scheduled" && short && (YES.test(said) || NO.test(said))) {
       state.pending = null;
       if (YES.test(said)) {
         $("reply").textContent = tr("okText");
@@ -238,7 +239,7 @@ async function handleUtterance(text) {
       finishAsk();
       return;
     }
-    if (YES.test(said)) {
+    if (short && YES.test(said)) {
       state.pending = null;
       $("youSaid").textContent = "“" + text + "”";
       $("card").innerHTML = "";
@@ -246,7 +247,7 @@ async function handleUtterance(text) {
       await runAction({ ...pending, action: pending.planned_action, reply: tr("okText") });
       return;
     }
-    if (NO.test(said)) {
+    if (short && NO.test(said)) {
       state.pending = null;
       $("youSaid").textContent = "“" + text + "”";
       $("card").innerHTML = "";
@@ -330,6 +331,13 @@ async function handleUtterance(text) {
     result = { ...result, planned_action: result.action, action: "confirm", reply: tr("askYes", { who, what, when: result.schedule_at ? tr("askYesWhen", { time: result.schedule_at }) : "" }) };
     $("reply").textContent = result.reply;
   }
+  // Remember exactly what Partner is about to do, so a spoken correction changes only the wrong part.
+  const task = {};
+  for (const k of ["action", "planned_action", "contact_id", "phone", "email_to", "email_subject", "email_body", "message_text", "schedule_at", "reminder_time"]) {
+    if (result[k] && result[k] !== "none") task[k] = result[k];
+  }
+  state.history.push({ role: "assistant", content: `${result.reply}\n${result.action === "confirm" || result.action === "clarify" ? "PENDING " : "DONE "}${JSON.stringify(task)}` });
+  state.history = state.history.slice(-12);
   if (result.learn_note && !state.memory.includes(result.learn_note)) { // Partner learns the user's choices
     state.memory.push(result.learn_note);
     save("bolo.memory", state.memory);
