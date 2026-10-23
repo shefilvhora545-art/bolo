@@ -707,14 +707,14 @@ $("closeFamily").onclick = () => $("family").classList.add("hidden");
 $("verifyMode").onchange = (e) => { state.verification = e.target.value; save("bolo.verification", state.verification); };
 // Import people from the phone's own contact list (Chrome on Android).
 const RELATION_FROM_NAME = [
-  [/\b(mummy|mumma|mom|mommy|maa|mother|mata|ammi|ba)\b/i, "mother"],
-  [/\b(papa|pappa|dad|daddy|father|pita|abbu|bapuji)\b/i, "father"],
-  [/\b(bhai|bhaiya|brother|bro)\b/i, "brother"],
-  [/\b(didi|ben|behen|sister|sis)\b/i, "sister"],
+  [/\b(mummy|mumma|mom|mommy|maa|mother|mata|ammi|ammijaan|amma|ba)\b/i, "mother"],
+  [/\b(papa|pappa|dad|daddy|father|pita|abbu|abba|abbajaan|bapuji)\b/i, "father"],
+  [/\b(bhai|bhaiya|bhaijaan|brother|bro)\b/i, "brother"],
+  [/\b(didi|ben|behen|appi|baji|aapa|sister|sis)\b/i, "sister"],
   [/\b(kaka|chacha)\b/i, "uncle (kaka, father's brother)"],
-  [/\b(mama)\b/i, "uncle (mama, mother's brother)"],
-  [/\b(fai|foi|bua)\b/i, "aunt (fai, father's sister)"],
-  [/\b(masi|mausi)\b/i, "aunt (masi, mother's sister)"],
+  [/\b(mama|mamu|mamujaan)\b/i, "uncle (mama/mamu, mother's brother)"],
+  [/\b(fai|foi|bua|phuppo|phuphi)\b/i, "aunt (fai/phuppo, father's sister)"],
+  [/\b(masi|mausi|khala)\b/i, "aunt (masi/khala, mother's sister)"],
   [/\b(dada|nana|grandpa)\b/i, "grandfather"],
   [/\b(dadi|nani|grandma)\b/i, "grandmother"],
 ];
