@@ -54,6 +54,9 @@ function localIso(d = new Date()) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
+// Date and time on screen, in the user's language.
+const showDate = (d) => new Date(d).toLocaleString(state.lang, { dateStyle: "medium", timeStyle: "short" });
+
 // First visit: English (the user can switch to Hindi or Gujarati with one tap).
 function defaultLang() {
   return "en-IN";
@@ -262,8 +265,12 @@ async function handleUtterance(text) {
     const pending = state.pending;
     const said = text.trim().replace(/^["“]|["”.!?,]$/g, "");
     const short = said.split(/\s+/).length <= 3; // "ha", "no", "yes please" - anything longer may be a correction
-    if (pending.kind === "ask" && short && (YES.test(said) || NO.test(said))) { pending.done(YES.test(said)); return; }
-    if (pending.kind === "photo" && short && (YES.test(said) || NO.test(said))) {
+    if ((pending.kind === "ask" || pending.kind === "photo") && !(short && (YES.test(said) || NO.test(said)))) {
+      speak(tr("sayYesNo"), state.lang).then(() => { if (state.pending === pending) listen(); }); // the pop-up stays answerable
+      return;
+    }
+    if (pending.kind === "ask") { pending.done(YES.test(said)); return; }
+    if (pending.kind === "photo") {
       state.pending = null;
       if (YES.test(said)) await sendPhotoAfterYes(pending.to);
       else { $("camShare").classList.add("hidden"); speak(tr("camKept"), state.lang); }
@@ -342,6 +349,7 @@ async function handleUtterance(text) {
     });
     result = await res.json();
     if (!res.ok) throw new Error(result.error || res.statusText);
+    if (result.provider && result.provider !== statusProvider) { statusProvider = result.provider; showStatus(); }
   } catch (err) {
     state.busy = false;
     setMode("idle");
@@ -594,7 +602,7 @@ async function runAction(r) {
     case "share_photo": {
       if (!camBlob) { speak(tr("noPhoto"), state.lang); return; }
       await speak(r.reply, r.reply_lang);
-      const to = { who: c ? c.name : phone, phone };
+      const to = { who: c ? c.name : phone || "WhatsApp", phone };
       if (pcHelper && to.phone && (await pcSendPhoto(to))) return; // this PC: zero taps
       // The phone's share screen needs a real tap, so show one big button that opens it with the photo attached.
       showTapScreen(tr("camSendPhoto", { who: to.who }), async () => {
@@ -602,7 +610,8 @@ async function runAction(r) {
         try {
           if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file] }); return; }
         } catch { return; /* cancelled */ }
-        openWhatsAppChat(to.phone, "");
+        if (to.phone) openWhatsAppChat(to.phone, "");
+        else window.location.href = "whatsapp://send";
       }, false, tr("camTapPhoto", { who: to.who }));
       return;
     }
@@ -639,7 +648,7 @@ async function runAction(r) {
       if (!at || !phone) break;
       state.scheduled.push({ id: "s" + Date.now(), at: at.getTime(), contact_id: r.contact_id, phone, text: r.message_text, channel: "whatsapp" });
       save("bolo.scheduled", state.scheduled);
-      card.appendChild(el(`<div class="card"><h3>⏰ ${esc(at.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }))} → ${esc(label(c) || phone)}</h3>
+      card.appendChild(el(`<div class="card"><h3>⏰ ${esc(showDate(at))} → ${esc(label(c) || phone)}</h3>
         <p>${esc(r.message_text)}</p><p class="meta">${esc(tr("schedNote"))}</p></div>`));
       keepAwake(true);
       break;
@@ -994,12 +1003,12 @@ function renderFamily() {
   $("verifyMode").value = state.verification;
   $("scheduledList").innerHTML = state.scheduled.length ? "" : "<li>—</li>";
   state.scheduled.forEach((sc) => {
-    const li = el(`<li>${new Date(sc.at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })} → ${esc(label(contactById(sc.contact_id)) || sc.phone)}: ${esc(sc.text)} <button title="${esc(tr("cancelTitle"))}">✖</button></li>`);
+    const li = el(`<li>${esc(showDate(sc.at))} → ${esc(label(contactById(sc.contact_id)) || sc.phone)}: ${esc(sc.text)} <button title="${esc(tr("cancelTitle"))}">✖</button></li>`);
     li.querySelector("button").onclick = () => { state.scheduled = state.scheduled.filter((x) => x.id !== sc.id); save("bolo.scheduled", state.scheduled); keepAwake(); renderFamily(); };
     $("scheduledList").appendChild(li);
   });
   $("reminderList").innerHTML = state.reminders.length ? "" : "<li>—</li>";
-  state.reminders.forEach((r) => $("reminderList").appendChild(el(`<li>${new Date(r.at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })} – ${esc(r.text)}</li>`)));
+  state.reminders.forEach((r) => $("reminderList").appendChild(el(`<li>${esc(showDate(r.at))} – ${esc(r.text)}</li>`)));
 }
 $("contactForm").onsubmit = (e) => {
   e.preventDefault();
@@ -1363,7 +1372,7 @@ setLanguage(state.lang).then(() => {
 });
 // Always run the newest Partner: compare with the live version and, if this copy is old,
 // clear the saved copy and reload once.
-const APP_VERSION = "2026.10.24-19";
+const APP_VERSION = "2026.10.24-20";
 fetch("version.json", { cache: "no-store" }).then((r) => r.json()).then(async ({ version }) => {
   if (!version || version === APP_VERSION || sessionStorage.getItem("bolo.reloadedFor") === version) return;
   sessionStorage.setItem("bolo.reloadedFor", version);
