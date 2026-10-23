@@ -541,6 +541,18 @@ async function runAction(r) {
       const target = appTarget(r.app, r.app_query);
       if (!target) return;
       if (target.uninstall) toast(tr("uninstallHelp")); // no app can remove itself: show the steps
+      if (target.install) { // Chrome shows its install prompt only after a real tap
+        const installed = matchMedia("(display-mode: standalone)").matches;
+        if (installed) { toast(tr("installed")); return; }
+        if (!installPrompt) { toast(tr("installHelp")); speak(tr("installHelp"), state.lang); return; }
+        showTapScreen("📲 " + tr("pInstall"), async () => {
+          installPrompt.prompt();
+          const c = await installPrompt.userChoice;
+          if (c.outcome === "accepted") save("bolo.installed", true);
+          installPrompt = null;
+        }, false, tr("tapInstall"));
+        return;
+      }
       if (target.androidOnly && !/android/i.test(navigator.userAgent)) { toast(tr("androidSettings")); return; }
       toast(tr("opening", { app: target.name }));
       confirmAction(`${target.icon} ${target.name}${r.app_query ? ": " + r.app_query : ""}`, target.url, false,
@@ -693,6 +705,7 @@ function appTarget(app, query = "") {
     wifi_settings: { name: "Wi-Fi", icon: "📶", url: settings("WIFI_SETTINGS"), androidOnly: true },
     phone_settings: { name: "Settings", icon: "⚙️", url: settings("SETTINGS"), androidOnly: true },
     uninstall_partner: { name: "Apps", icon: "🗑️", url: settings("MANAGE_APPLICATIONS_SETTINGS"), androidOnly: true, uninstall: true },
+    install_partner: { name: "Partner", icon: "📲", url: "", install: true },
   };
   return map[app] || null;
 }
@@ -1253,7 +1266,7 @@ setLanguage(state.lang).then(() => {
 });
 // Always run the newest Partner: compare with the live version and, if this copy is old,
 // clear the saved copy and reload once.
-const APP_VERSION = "2026.10.23-12";
+const APP_VERSION = "2026.10.23-13";
 fetch("version.json", { cache: "no-store" }).then((r) => r.json()).then(async ({ version }) => {
   if (!version || version === APP_VERSION || sessionStorage.getItem("bolo.reloadedFor") === version) return;
   sessionStorage.setItem("bolo.reloadedFor", version);
