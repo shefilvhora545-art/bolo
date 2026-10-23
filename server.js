@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { execFile } from "node:child_process";
 
 if (fs.existsSync(".env")) process.loadEnvFile(".env");
-const { runAgent } = await import("./lib/agent.js");
+const { runAgent, translateStrings } = await import("./lib/agent.js");
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC = path.join(here, "public");
@@ -42,6 +42,15 @@ function readJson(req) {
 }
 
 http.createServer(async (req, res) => {
+  if (req.method === "POST" && req.url === "/api/translate") {
+    try {
+      const out = await translateStrings(await readJson(req));
+      res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(out));
+    } catch (err) {
+      res.writeHead(500, { "Content-Type": "application/json" }).end(JSON.stringify({ error: err.message }));
+    }
+    return;
+  }
   if (req.url === "/api/status") {
     const provider = process.env.ANTHROPIC_API_KEY ? "Claude" : process.env.GEMINI_API_KEY ? "Gemini" : "";
     res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ provider }));

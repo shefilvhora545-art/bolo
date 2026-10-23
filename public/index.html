@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="gu">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -10,6 +10,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Noto+Sans+Gujarati:wght@400;600;700&family=Noto+Sans+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -17,16 +19,16 @@
   <header class="top">
     <div class="brand">
       <span class="logo" aria-hidden="true"></span>
-      <div><b>Partner</b><small>Your voice partner · પાર્ટનર · पार्टनर</small></div>
-      <span class="status" id="status"><i></i> <span id="statusText">Online</span></span>
-      <button class="hf" id="hfBtn" title="Hands-free: say 'Partner' (or 'Hey Partner') and your request">🎙 <span id="hfText">Hands-free</span></button>
+      <div><b>Partner</b><small data-i18n="brandSub">Your voice partner</small></div>
+      <span class="status" id="status"><i></i> <span id="statusText" data-i18n="online">Online</span></span>
+      <button class="hf" id="hfBtn" data-i18n-title="hfTitle" title="Hands-free: say “Partner” and your request">🎙 <span id="hfText">Hands-free</span></button>
     </div>
     <div class="langs" id="langs">
       <button data-lang="gu-IN" class="chip">ગુજરાતી</button>
       <button data-lang="hi-IN" class="chip">हिन्दी</button>
       <button data-lang="en-IN" class="chip">English</button>
       <select id="moreLangs" class="chip" aria-label="More languages">
-        <option value="">🌐 More</option>
+        <option value="" data-i18n="more">🌐 More</option>
         <option value="mr-IN">मराठी</option>
         <option value="ta-IN">தமிழ்</option>
         <option value="te-IN">తెలుగు</option>
@@ -55,7 +57,7 @@
       <div class="ring" id="ring"><div class="ring-inner"><span id="ringIcon">🎤</span></div></div>
     </div>
     <p class="state" id="stateText">Ready</p>
-    <p class="hint" id="hint">સ્ક્રીન પર ગમે ત્યાં દબાવો અને બોલો</p>
+    <p class="hint" id="hint">Tap anywhere on the screen and speak</p>
     <div class="suggest" id="suggest" aria-label="Try saying"></div>
     <p class="you" id="youSaid"></p>
     <p class="reply" id="reply"></p>
@@ -63,71 +65,95 @@
   </main>
 
   <nav class="bottom">
-    <button id="btnRead" class="tool">📋 <span>Read a message</span></button>
-    <button id="btnFamily" class="tool">👨‍👩‍👧 <span>Family</span></button>
-    <button id="btnSos" class="tool sos">🆘 <span>SOS</span></button>
+    <button id="btnRead" class="tool">📋 <span data-i18n="btnRead">Read a message</span></button>
+    <button id="btnFamily" class="tool">👨‍👩‍👧 <span data-i18n="btnFamily">Family</span></button>
+    <button id="btnSos" class="tool sos">🆘 <span data-i18n="btnSos">SOS</span></button>
   </nav>
   <form id="typeForm" class="typebar" autocomplete="off">
-    <input id="typeInput" placeholder="Or type here…">
+    <input id="typeInput" data-i18n-ph="typePh" placeholder="Or type here…">
     <button>➤</button>
   </form>
 
   <!-- Big confirm screen: one tap anywhere does the action -->
   <div id="confirm" class="overlay hidden" role="dialog">
     <button id="confirmGo" class="confirm-go"></button>
-    <button id="confirmCancel" class="confirm-cancel">✖ Cancel / રદ કરો</button>
+    <button id="confirmCancel" class="confirm-cancel" data-i18n="cancelBig">✖ Cancel</button>
   </div>
 
   <!-- Family setup (done once by a son/daughter) -->
   <div id="family" class="overlay hidden" role="dialog">
     <div class="panel">
-      <h2>👨‍👩‍👧 Family contacts</h2>
-      <p class="small">A family member fills this once. Partner uses relation + city to pick the right person.</p>
+      <h2 data-i18n="famTitle">👨‍👩‍👧 Family contacts</h2>
+      <p class="small" data-i18n="famHelp">A family member fills this once. Partner uses relation + city to pick the right person.</p>
       <div id="contactList"></div>
       <form id="contactForm" class="cform">
         <input type="hidden" name="id">
-        <input name="name" placeholder="Name (e.g. Anish)" required>
-        <input name="relation" placeholder="Relation (kaka, mama, fai, dikro…)">
-        <input name="city" placeholder="City (e.g. Nadiad)">
-        <input name="phone" placeholder="Phone" inputmode="tel" required>
-        <input name="email" placeholder="Email (optional)" type="email">
-        <input name="birthday" placeholder="Birthday (e.g. 5 Nov)">
-        <label class="check"><input type="checkbox" name="emergency"> Emergency contact (SOS)</label>
-        <button class="primary">💾 Save contact</button>
+        <input name="name" data-i18n-ph="phName" placeholder="Name (e.g. Anish)" required>
+        <input name="relation" data-i18n-ph="phRelation" placeholder="Relation">
+        <input name="city" data-i18n-ph="phCity" placeholder="City (e.g. Nadiad)">
+        <input name="phone" data-i18n-ph="phPhone" placeholder="Phone" inputmode="tel" required>
+        <input name="email" data-i18n-ph="phEmail" placeholder="Email (optional)" type="email">
+        <input name="birthday" data-i18n-ph="phBirthday" placeholder="Birthday (e.g. 5 Nov)">
+        <label class="check"><input type="checkbox" name="emergency"> <span data-i18n="emergencyLabel">Emergency contact (SOS)</span></label>
+        <button class="primary" data-i18n="saveContact">💾 Save contact</button>
       </form>
-      <h3>🔐 Safety check before sending</h3>
+      <h3 data-i18n="safetyTitle">🔐 Safety check before sending</h3>
       <select id="verifyMode" class="chip">
-        <option value="smart">Smart: no questions for easy tasks, "Ha ke na?" for sending, full read-back for hard tasks (recommended)</option>
-        <option value="two-step">2-step: always read back and ask "Ha ke na?", then one tap</option>
-        <option value="one-step">1-step: just one tap to confirm</option>
-        <option value="off">Off</option>
+        <option value="smart" data-i18n="vSmart">Smart: no questions for easy tasks, "Ha ke na?" for sending, full read-back for hard tasks (recommended)</option>
+        <option value="two-step" data-i18n="vTwo">2-step: always read back and ask "Ha ke na?", then one tap</option>
+        <option value="one-step" data-i18n="vOne">1-step: just one tap to confirm</option>
+        <option value="off" data-i18n="vOff">Off</option>
       </select>
-      <h3>💬 Scheduled messages</h3>
+      <h3 data-i18n="schedTitle">💬 Scheduled messages</h3>
       <ul id="scheduledList" class="mem"></ul>
-      <h3>🧠 Things Partner remembers</h3>
+      <h3 data-i18n="memTitle">🧠 Things Partner remembers</h3>
       <ul id="memoryList" class="mem"></ul>
-      <h3>⏰ Reminders</h3>
+      <h3 data-i18n="remTitle">⏰ Reminders</h3>
       <ul id="reminderList" class="mem"></ul>
       <div class="row">
-        <button id="importPhone" class="primary">📱 Import from phone contacts</button>
-        <button id="resetDemo" class="ghost">↺ Load demo contacts</button>
-        <button id="closeFamily" class="primary">Done</button>
+        <button id="openSetup" class="ghost" data-i18n="openSetup">⚙️ Permissions & setup</button>
+        <button id="importPhone" class="primary" data-i18n="importPhone">📱 Import from phone contacts</button>
+        <button id="resetDemo" class="ghost" data-i18n="loadDemo">↺ Load demo contacts</button>
+        <button id="closeFamily" class="primary" data-i18n="done">Done</button>
       </div>
+    </div>
+  </div>
+
+  <!-- First-run setup: language + permissions, like a normal app -->
+  <div id="setup" class="overlay hidden" role="dialog">
+    <div class="panel setup">
+      <div class="setup-logo" aria-hidden="true"></div>
+      <h2 data-i18n="setupTitle">Welcome to Partner</h2>
+      <p class="small" data-i18n="setupHelp">Allow these once. Then just say “Partner” and talk.</p>
+      <div class="langs setup-langs">
+        <button data-setlang="gu-IN" class="chip">ગુજરાતી</button>
+        <button data-setlang="hi-IN" class="chip">हिन्दी</button>
+        <button data-setlang="en-IN" class="chip">English</button>
+        <button data-setlang="mr-IN" class="chip">मराठी</button>
+        <button data-setlang="ur-IN" class="chip">اردو</button>
+      </div>
+      <div class="perm" id="permMic"><span class="pi">🎤</span><div><b data-i18n="pMic">Microphone</b><small data-i18n="pMicHelp">So Partner can hear you – always listening for “Partner” while open</small></div><button class="primary" data-i18n="allow">Allow</button></div>
+      <div class="perm" id="permNotif"><span class="pi">🔔</span><div><b data-i18n="pNotif">Notifications</b><small data-i18n="pNotifHelp">Reminders and midnight birthday wishes, even when the screen is busy</small></div><button class="primary" data-i18n="allow">Allow</button></div>
+      <div class="perm" id="permContacts"><span class="pi">📱</span><div><b data-i18n="pContacts">Contacts</b><small data-i18n="pContactsHelp">Pick your family from the phone's contacts (Mummy, Ammi, Bhai…)</small></div><button class="primary" data-i18n="allow">Allow</button></div>
+      <div class="perm" id="permLocation"><span class="pi">📍</span><div><b data-i18n="pLocation">Location</b><small data-i18n="pLocationHelp">Only sent to your family when you press SOS</small></div><button class="primary" data-i18n="allow">Allow</button></div>
+      <div class="perm" id="permInstall"><span class="pi">📲</span><div><b data-i18n="pInstall">Install Partner app</b><small data-i18n="pInstallHelp">Icon on your home screen – long-press it for Talk and SOS shortcuts</small></div><button class="primary" data-i18n="install">Install</button></div>
+      <button id="setupDone" class="big" data-i18n="startUsing">Start using Partner</button>
     </div>
   </div>
 
   <!-- Paste a message to read / check for fraud -->
   <div id="readBox" class="overlay hidden" role="dialog">
     <div class="panel">
-      <h2>📋 Message to read</h2>
-      <textarea id="readText" rows="7" placeholder="Paste the SMS / WhatsApp / letter text here"></textarea>
+      <h2 data-i18n="readTitle">📋 Message to read</h2>
+      <textarea id="readText" rows="7" data-i18n-ph="readPh" placeholder="Paste the SMS / WhatsApp / letter text here"></textarea>
       <div class="row">
-        <button id="readCancel" class="ghost">Cancel</button>
-        <button id="readGo" class="primary">🔊 Read & explain</button>
+        <button id="readCancel" class="ghost" data-i18n="cancel">Cancel</button>
+        <button id="readGo" class="primary" data-i18n="readGo">🔊 Read & explain</button>
       </div>
     </div>
   </div>
 
+  <script src="i18n.js"></script>
   <script src="bolo.js"></script>
 </body>
 </html>

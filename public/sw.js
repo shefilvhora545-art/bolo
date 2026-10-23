@@ -1,0 +1,25 @@
+// Partner service worker: makes the app installable and shows the app shell offline.
+const CACHE = "partner-v1";
+const SHELL = ["/", "/index.html", "/style.css", "/i18n.js", "/bolo.js", "/icons/icon-192.png"];
+
+self.addEventListener("install", (e) => {
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
+});
+self.addEventListener("activate", (e) => {
+  e.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
+});
+// Network first (always the newest version), cache only when offline. API calls are never cached.
+self.addEventListener("fetch", (e) => {
+  const url = new URL(e.request.url);
+  if (e.request.method !== "GET" || url.pathname.startsWith("/api/")) return;
+  e.respondWith(
+    fetch(e.request)
+      .then((res) => { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(e.request, copy)); return res; })
+      .catch(() => caches.match(e.request).then((r) => r || caches.match("/")))
+  );
+});
+// Tapping a reminder notification opens Partner.
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  e.waitUntil(self.clients.matchAll({ type: "window" }).then((list) => (list[0] ? list[0].focus() : self.clients.openWindow("/"))));
+});

@@ -35,10 +35,8 @@ const state = {
   busy: false,
 };
 
-const YES = /^(h+a+n?|ha+ji|haa+|hā|yes|yeah|yep|ok(ay)?|barabar|sachu|theek|thik|kar(o|i)?|mokl(o|i|je)|send|haan ji|ji haan|हाँ|हां|हा|જી|હા|હાં|બરાબર)(?=$|[\s.,!?])/i;
-const NO = /^(n+a+|nahi|nai|no|nope|cancel|rehva de|rahne do|mat|ના|નહીં|नहीं|ना)(?=$|[\s.,!?])/i;
-const OK_TEXT = { "gu-IN": "બરાબર, કરું છું.", "hi-IN": "ठीक है, कर रहा हूँ।", "en-IN": "Okay, doing it now." };
-const CANCEL_TEXT = { "gu-IN": "બરાબર, રદ કર્યું.", "hi-IN": "ठीक है, रद्द कर दिया।", "en-IN": "Okay, cancelled." };
+const YES = /^(h+a+n?|ha+ji|haa+|hā|yes|yeah|yep|ok(ay)?|barabar|sachu|theek|thik|kar(o|i)?|mokl(o|i|je)|send|haan ji|ji haan|हाँ|हां|हा|हो|જી|હા|હાં|બરાબર|ہاں|جی|sí|si|oui|ja|sim|да|はい|是|ndiyo|ya)(?=$|[\s.,!?])/i;
+const NO = /^(n+a+|nahi|nai|no|nope|cancel|rehva de|rahne do|mat|ના|નહીં|नहीं|ना|नाही|نہیں|non|nein|não|nao|нет|いいえ|不|hapana|tidak)(?=$|[\s.,!?])/i;
 
 // Safety rules enforced by the app itself, whatever the AI answers: these actions wait for a spoken "yes".
 const NEEDS_YES = {
@@ -46,11 +44,6 @@ const NEEDS_YES = {
   "two-step": ["whatsapp", "sms", "email", "schedule_message"],
   "one-step": [],
   off: [],
-};
-const ASK_YES = {
-  "gu-IN": (who, what, when) => `${who} ને ${when ? when + " એ " : ""}આ મોકલું: "${what}"? હા કે ના?`,
-  "hi-IN": (who, what, when) => `${who} को ${when ? when + " पर " : ""}यह भेजूँ: "${what}"? हाँ या ना?`,
-  "en-IN": (who, what, when) => `Send this to ${who}${when ? " at " + when : ""}: "${what}"? Yes or no?`,
 };
 
 // Local time as "YYYY-MM-DD HH:MM", the format the AI uses for schedules.
@@ -67,32 +60,13 @@ function defaultLang() {
   return "en-IN";
 }
 
-// "Try saying..." examples, shown in the selected language (English for the others).
-const SUGGESTIONS = {
-  "gu-IN": ["મારા અનીશ કાકા ને કોલ લગાવ", "કાલે પ્રિયા બેન નો બર્થડે છે, રાત્રે 12 વાગે વિશ મોકલજે", "મને 8 વાગે દવા યાદ કરાવજે", "ગીતા ફઈ નો બર્થડે ક્યારે છે?"],
-  "hi-IN": ["मेरे अनीश चाचा को कॉल लगाओ", "रमेश मामा को व्हाट्सएप करो कि मैं 5 बजे आऊंगा", "मुझे रात 8 बजे दवा याद दिलाना", "शाद भाई को कॉल करो"],
-  "en-IN": ["Call my uncle Anish", "Tomorrow is my sister Priya's birthday, send her a wish at 12 AM", "Remind me to take my medicine at 8 PM", "Make me a simple calculator website"],
-};
-const STATE_TEXT = { idle: "Ready", listening: "Listening…", thinking: "Thinking…", speaking: "Speaking" };
-
-const HINTS = {
-  "gu-IN": "સ્ક્રીન પર ગમે ત્યાં દબાવો અને બોલો",
-  "hi-IN": "स्क्रीन पर कहीं भी दबाएं और बोलें",
-  "en-IN": "Tap anywhere on the screen and speak",
-};
-const TAP_TO_CONFIRM = {
-  "gu-IN": "કન્ફર્મ કરવા સ્ક્રીન પર ગમે ત્યાં દબાવો.",
-  "hi-IN": "पक्का करने के लिए स्क्रीन पर कहीं भी दबाएं।",
-  "en-IN": "Tap anywhere on the screen to confirm.",
-};
-const t = (table) => table[state.lang] || table[state.lang.split("-")[0] + "-IN"] || table["en-IN"];
 
 // ---------- UI state ----------
 function setMode(mode) { // idle | listening | thinking | speaking
   document.body.classList.remove("listening", "thinking", "speaking");
   if (mode !== "idle") document.body.classList.add(mode);
   $("ringIcon").textContent = { idle: "🎤", listening: "👂", thinking: "💭", speaking: "🔊" }[mode];
-  $("stateText").textContent = STATE_TEXT[mode];
+  $("stateText").textContent = tr({ idle: "ready", listening: "listening", thinking: "thinking", speaking: "speaking" }[mode]);
 }
 function vibrate(pattern) { try { navigator.vibrate && navigator.vibrate(pattern); } catch { /* not supported */ } }
 function toast(text) {
@@ -106,15 +80,39 @@ function renderLang() {
   const more = $("moreLangs");
   more.value = [...more.options].some((o) => o.value === state.lang) ? state.lang : "";
   more.classList.toggle("on", more.value !== "");
-  $("hint").textContent = t(HINTS);
+  applyStaticStrings();
+  $("hint").textContent = handsFree ? tr("hfHint") : tr("hint");
+  $("hfText").textContent = handsFree ? tr("hfOn") : tr("hf");
+  $("stateText").textContent = tr("ready");
   $("suggest").innerHTML = "";
-  (SUGGESTIONS[state.lang] || SUGGESTIONS["en-IN"]).forEach((text) => {
+  ["sug1", "sug2", "sug3", "sug4"].map((k) => tr(k)).forEach((text) => {
     const b = document.createElement("button");
     b.textContent = "“" + text + "”";
     b.onclick = (e) => { e.stopPropagation(); handleUtterance(text); };
     $("suggest").appendChild(b);
   });
   document.documentElement.lang = state.lang.split("-")[0];
+  document.documentElement.dir = /^(ur|ar)/.test(state.lang) ? "rtl" : "ltr";
+  if (statusProvider !== null) showStatus();
+}
+
+// Switch the whole screen to a language (AI-translated once for languages beyond gu/hi/en).
+async function setLanguage(lang) {
+  state.lang = lang;
+  save("bolo.lang", lang);
+  renderLang();
+  const ok = await loadStrings(lang, () => toast(tr("translating")));
+  if (state.lang !== lang) return; // the user picked another language meanwhile
+  if (!ok) toast(tr("translateFailed"));
+  renderLang();
+  restartHandsFree();
+  if (!$("family").classList.contains("hidden")) renderFamily();
+}
+
+let statusProvider = null;
+function showStatus() {
+  $("statusText").textContent = statusProvider === "" ? tr("noKey") : statusProvider ? `${tr("online")} · ${statusProvider}` : tr("offline");
+  $("status").classList.toggle("off", !statusProvider);
 }
 
 // ---------- speaking ----------
@@ -133,7 +131,7 @@ function speak(text, lang) {
     u.onend = u.onerror = () => {
       setMode("idle");
       spokeUntil = Date.now() + 800; // ignore the echo of Partner's own voice for a moment
-      if (handsFree) hfAwake = Date.now() + 10000; // the user can reply without saying "Partner" again
+      if (handsFree) hfAwake = Date.now() + FOLLOW_UP_MS; // the user can reply without saying "Partner" again
       resolve();
     };
     speechSynthesis.speak(u);
@@ -148,7 +146,7 @@ let recognizer = null;
 function listen() {
   if (handsFree) { hfAwake = Date.now() + 10000; setMode("listening"); vibrate(60); return; } // already listening
   if (state.busy) return;
-  if (!Recognition) { toast("Voice input needs Google Chrome. You can type below."); $("typeInput").focus(); return; }
+  if (!Recognition) { toast(tr("needChrome")); $("typeInput").focus(); return; }
   if (recognizer) { recognizer.stop(); return; }
   speechSynthesis && speechSynthesis.cancel();
   recognizer = new Recognition();
@@ -163,8 +161,8 @@ function listen() {
     $("youSaid").textContent = "“" + (finalText || interim) + "”";
   };
   recognizer.onerror = (e) => {
-    if (e.error === "not-allowed") toast("Please allow the microphone for this site.");
-    else if (e.error !== "no-speech" && e.error !== "aborted") toast("Mic error: " + e.error);
+    if (e.error === "not-allowed") toast(tr("allowMic"));
+    else if (e.error !== "no-speech" && e.error !== "aborted") toast(tr("micError", { e: e.error }));
   };
   recognizer.onend = () => {
     recognizer = null;
@@ -178,15 +176,10 @@ function listen() {
 let handsFree = load("bolo.handsfree", false);
 let hfRec = null, hfAwake = 0, spokeUntil = 0, lastSpoken = "";
 const WAKE = /^(hey |ok |hi |hello |he )?(partner|partnar|patner|pardner|partner ji|પાર્ટનર|પાટનર|पार्टनर|पाटनर|پارٹنر)(?=$|[\s,.!?])[\s,.!?]*/i;
-const HF_HINTS = {
-  "gu-IN": "“પાર્ટનર” કહો અને પછી તમારું કામ કહો",
-  "hi-IN": "“पार्टनर” कहें और फिर अपना काम बताएं",
-  "en-IN": "Say “Partner” and then your request",
-};
 function renderHandsFree() {
   $("hfBtn").classList.toggle("on", handsFree);
-  $("hfText").textContent = handsFree ? "Hands-free ON" : "Hands-free";
-  $("hint").textContent = handsFree ? t(HF_HINTS) : t(HINTS);
+  $("hfText").textContent = handsFree ? tr("hfOn") : tr("hf");
+  $("hint").textContent = handsFree ? tr("hfHint") : tr("hint");
 }
 function startHandsFree() {
   if (!Recognition || !handsFree || hfRec) return;
@@ -209,7 +202,7 @@ function startHandsFree() {
     handleUtterance(command);
   };
   hfRec.onerror = (e) => {
-    if (e.error === "not-allowed") { handsFree = false; save("bolo.handsfree", false); renderHandsFree(); toast("Please allow the microphone for hands-free mode."); }
+    if (e.error === "not-allowed") { handsFree = false; save("bolo.handsfree", false); renderHandsFree(); toast(tr("allowMicHf")); }
   };
   hfRec.onend = () => { hfRec = null; if (handsFree && document.visibilityState === "visible") setTimeout(startHandsFree, 300); };
   try { hfRec.start(); } catch { hfRec = null; }
@@ -217,11 +210,11 @@ function startHandsFree() {
 function stopHandsFree() { const r = hfRec; hfRec = null; r && r.abort(); }
 $("hfBtn").onclick = (e) => {
   e.stopPropagation();
-  if (!Recognition) { toast("Hands-free needs Google Chrome."); return; }
+  if (!Recognition) { toast(tr("hfChrome")); return; }
   handsFree = !handsFree;
   save("bolo.handsfree", handsFree);
   renderHandsFree();
-  if (handsFree) { startHandsFree(); speak(t(HF_HINTS), state.lang); } else stopHandsFree();
+  if (handsFree) { startHandsFree(); speak(tr("hfHint"), state.lang); } else stopHandsFree();
 };
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && handsFree) startHandsFree(); });
 
@@ -234,13 +227,13 @@ async function handleUtterance(text) {
     if (pending.kind === "scheduled" && (YES.test(said) || NO.test(said))) {
       state.pending = null;
       if (YES.test(said)) {
-        $("reply").textContent = t(OK_TEXT);
-        await speak(t(OK_TEXT), state.lang);
+        $("reply").textContent = tr("okText");
+        await speak(tr("okText"), state.lang);
         await sendWhatsApp(pending.s.phone, pending.s.text, pending.who);
       } else {
         goHome(); // WhatsApp was never opened, so nothing is left typed anywhere
-        $("reply").textContent = t(CANCEL_TEXT);
-        await speak(t(CANCEL_TEXT), state.lang);
+        $("reply").textContent = tr("cancelText");
+        await speak(tr("cancelText"), state.lang);
       }
       finishAsk();
       return;
@@ -250,16 +243,16 @@ async function handleUtterance(text) {
       $("youSaid").textContent = "“" + text + "”";
       $("card").innerHTML = "";
       state.history.push({ role: "user", content: text }, { role: "assistant", content: `[confirmed ${pending.planned_action}]` });
-      await runAction({ ...pending, action: pending.planned_action, reply: t(OK_TEXT) });
+      await runAction({ ...pending, action: pending.planned_action, reply: tr("okText") });
       return;
     }
     if (NO.test(said)) {
       state.pending = null;
       $("youSaid").textContent = "“" + text + "”";
       $("card").innerHTML = "";
-      $("reply").textContent = t(CANCEL_TEXT);
+      $("reply").textContent = tr("cancelText");
       state.history.push({ role: "user", content: text }, { role: "assistant", content: "[cancelled]" });
-      speak(t(CANCEL_TEXT), state.lang);
+      speak(tr("cancelText"), state.lang);
       return;
     }
     state.pending = null; // anything else: let the AI understand the new sentence
@@ -300,7 +293,7 @@ async function handleUtterance(text) {
     state.busy = false;
     setMode("idle");
     $("reply").textContent = "⚠️ " + err.message;
-    speak(state.lang === "en-IN" ? "Sorry, something went wrong. Please try again." : "માફ કરજો, ફરી પ્રયત્ન કરો.", state.lang);
+    speak(tr("errorSpeak"), state.lang);
     return;
   }
   state.sharedText = "";
@@ -318,14 +311,14 @@ async function handleUtterance(text) {
       saved = { id: "c" + Date.now(), name: result.new_contact_name, relation: result.new_contact_relation || "", city: "", phone: result.phone, email: "", birthday: "", emergency: false };
       state.contacts.push(saved);
       save("bolo.contacts", state.contacts);
-      toast(`💾 Saved ${saved.name} to Family`);
+      toast(tr("savedContact", { name: saved.name }));
     }
     if (!result.contact_id) result.contact_id = saved.id;
   }
   // Never lose a task: if the AI filled a reminder or a note next to another action, keep it too.
   if (result.reminder_time && result.action !== "reminder" && result.action !== "confirm" && /^\d{1,2}:\d{2}$/.test(result.reminder_time)) {
     addReminder(result.reminder_time, result.reminder_text || result.reply);
-    toast("⏰ Reminder set for " + result.reminder_time);
+    toast(tr("reminderSet", { time: result.reminder_time }));
   }
   if (result.memory_note && !["remember", "forget"].includes(result.action) && !state.memory.includes(result.memory_note)) {
     state.memory.push(result.memory_note); save("bolo.memory", state.memory);
@@ -334,7 +327,7 @@ async function handleUtterance(text) {
   if ((NEEDS_YES[state.verification] || []).includes(result.action)) {
     const who = label(contactById(result.contact_id)) || result.phone || result.email_to;
     const what = (result.message_text || result.email_subject || "").slice(0, 120);
-    result = { ...result, planned_action: result.action, action: "confirm", reply: t(ASK_YES)(who, what, result.schedule_at) };
+    result = { ...result, planned_action: result.action, action: "confirm", reply: tr("askYes", { who, what, when: result.schedule_at ? tr("askYesWhen", { time: result.schedule_at }) : "" }) };
     $("reply").textContent = result.reply;
   }
   if (result.learn_note && !state.memory.includes(result.learn_note)) { // Partner learns the user's choices
@@ -344,6 +337,24 @@ async function handleUtterance(text) {
   await runAction(result);
   // One sentence, many tasks: run the rest automatically.
   if (result.follow_up && !state.pending && result.action !== "clarify") setTimeout(() => handleUtterance(result.follow_up), 700);
+  else if (!state.pending && !["clarify", "confirm"].includes(result.action)) followUpListen();
+}
+
+// After finishing a task Partner stays active for a few seconds, so the next command needs no wake word or tap.
+const FOLLOW_UP_MS = 8000;
+let followTimer = null;
+function followUpListen() {
+  if (document.visibilityState !== "visible" || !Recognition) return;
+  clearTimeout(followTimer);
+  if (handsFree) {
+    hfAwake = Date.now() + FOLLOW_UP_MS;
+    setMode("listening");
+    followTimer = setTimeout(() => { if (!state.busy && !speechSynthesis.speaking && Date.now() >= hfAwake) setMode("idle"); }, FOLLOW_UP_MS);
+    return;
+  }
+  if (recognizer || state.busy) return;
+  listen();
+  followTimer = setTimeout(() => { if (recognizer && !state.busy) recognizer.stop(); }, FOLLOW_UP_MS);
 }
 
 // ---------- WhatsApp sending ----------
@@ -353,11 +364,11 @@ fetch("/api/pc-status").then((r) => r.ok && r.json()).then((d) => (pcHelper = !!
 
 async function sendWhatsApp(phone, text, who) {
   if (pcHelper) {
-    toast("💬 Sending on WhatsApp Desktop…");
+    toast(tr("sendingDesktop"));
     const r = await fetch("/api/pc-send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone, text }) })
       .then((x) => x.json()).catch(() => ({ result: "error" }));
-    if (r.result === "sent") { toast("✅ Sent to " + (who || phone)); return; }
-    toast("WhatsApp Desktop not found – opening WhatsApp Web");
+    if (r.result === "sent") { toast(tr("sentTo", { who: who || phone })); return; }
+    toast(tr("noDesktop"));
   }
   window.location.href = `https://wa.me/${waNumber(phone)}?text=${encodeURIComponent(text)}`;
 }
@@ -413,12 +424,12 @@ async function runAction(r) {
       card.appendChild(el(`<div class="card"><h3>📧 ${esc(r.email_to)}</h3><p><b>${esc(r.email_subject)}</b></p><p style="white-space:pre-wrap">${esc(r.email_body)}</p></div>`));
       await speak(r.reply, r.reply_lang);
       const url = `mailto:${encodeURIComponent(r.email_to)}?subject=${encodeURIComponent(r.email_subject)}&body=${encodeURIComponent(r.email_body)}`;
-      confirmAction(`📧 Email: ${r.email_to}`, url);
+      confirmAction(`📧 ${r.email_to}`, url);
       return;
     }
     case "remember": {
       if (r.memory_note) { state.memory.push(r.memory_note); save("bolo.memory", state.memory); }
-      card.appendChild(el(`<div class="card"><h3>🧠 Saved</h3><p>${esc(r.memory_note)}</p></div>`));
+      card.appendChild(el(`<div class="card"><h3>${esc(tr("saved"))}</h3><p>${esc(r.memory_note)}</p></div>`));
       break;
     }
     case "forget": {
@@ -430,14 +441,14 @@ async function runAction(r) {
     case "reminder": {
       if (/^\d{1,2}:\d{2}$/.test(r.reminder_time)) {
         addReminder(r.reminder_time, r.reminder_text || r.reply);
-        card.appendChild(el(`<div class="card"><h3>⏰ ${esc(r.reminder_time)}</h3><p>${esc(r.reminder_text)}</p><p class="meta">Keep Partner open on the phone so it can speak the reminder.</p></div>`));
+        card.appendChild(el(`<div class="card"><h3>⏰ ${esc(r.reminder_time)}</h3><p>${esc(r.reminder_text)}</p><p class="meta">${esc(tr("reminderNote"))}</p></div>`));
       }
       break;
     }
     case "read_explain": {
       if (r.scam_risk === "high") {
         vibrate([300, 100, 300, 100, 300]);
-        card.appendChild(el(`<div class="card scam"><h3>⚠️ FRAUD / છેતરપિંડી</h3><p>Do not click links, pay money or share OTP.</p></div>`));
+        card.appendChild(el(`<div class="card scam"><h3>${esc(tr("fraudTitle"))}</h3><p>${esc(tr("fraudText"))}</p></div>`));
       }
       break;
     }
@@ -450,9 +461,9 @@ async function runAction(r) {
       state.pending = r;
       const who = label(c) || phone || r.email_to;
       const when = r.schedule_at ? `<p class="meta">⏰ ${esc(r.schedule_at)}</p>` : "";
-      const box = el(`<div class="card"><h3>✅ Confirm: ${esc(r.planned_action)} → ${esc(who)}</h3>${when}
+      const box = el(`<div class="card"><h3>${esc(tr("confirmTitle"))}: ${esc(who)}</h3>${when}
         <p style="white-space:pre-wrap">${esc(r.message_text || r.email_subject || "")}</p>
-        <div class="row"><button class="big yes">✔ હા / Yes</button><button class="big alt no">✖ ના / No</button></div></div>`);
+        <div class="row"><button class="big yes">${esc(tr("yes"))}</button><button class="big alt no">${esc(tr("no"))}</button></div></div>`);
       box.querySelector(".yes").onclick = (e) => { e.stopPropagation(); handleUtterance("yes"); };
       box.querySelector(".no").onclick = (e) => { e.stopPropagation(); handleUtterance("no"); };
       card.appendChild(box);
@@ -466,7 +477,7 @@ async function runAction(r) {
       state.scheduled.push({ id: "s" + Date.now(), at: at.getTime(), contact_id: r.contact_id, phone, text: r.message_text, channel: "whatsapp" });
       save("bolo.scheduled", state.scheduled);
       card.appendChild(el(`<div class="card"><h3>⏰ ${esc(at.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }))} → ${esc(label(c) || phone)}</h3>
-        <p>${esc(r.message_text)}</p><p class="meta">🌙 Keep Partner open and the phone charging. Night mode keeps the screen awake so it fires on time.</p></div>`));
+        <p>${esc(r.message_text)}</p><p class="meta">${esc(tr("schedNote"))}</p></div>`));
       keepAwake();
       break;
     }
@@ -502,7 +513,7 @@ function showTapScreen(text, url, danger = false) {
   go.classList.toggle("danger", danger);
   box.classList.remove("hidden");
   vibrate(200);
-  speak(t(TAP_TO_CONFIRM), state.lang);
+  speak(tr("tapConfirm"), state.lang);
   go.onclick = () => {
     box.classList.add("hidden"); speechSynthesis.cancel();
     typeof url === "function" ? url() : (window.location.href = url);
@@ -516,8 +527,8 @@ function sendSosWhatsApp(c) {
   navigator.geolocation.getCurrentPosition(
     (pos) => {
       const link = `https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`;
-      const msg = `🆘 EMERGENCY! I need help. My location: ${link}`;
-      $("card").appendChild(el(`<div class="card scam"><h3>🆘 SOS → ${esc(label(target))}</h3><a class="big" href="https://wa.me/${waNumber(target.phone)}?text=${encodeURIComponent(msg)}">💬 Send location on WhatsApp</a></div>`));
+      const msg = tr("sosMsg", { link });
+      $("card").appendChild(el(`<div class="card scam"><h3>${esc(tr("sosTitle"))} → ${esc(label(target))}</h3><a class="big" href="https://wa.me/${waNumber(target.phone)}?text=${encodeURIComponent(msg)}">${esc(tr("sosSendLoc"))}</a></div>`));
     },
     () => { /* location denied: the call still works */ },
     { enableHighAccuracy: true, timeout: 8000 }
@@ -530,13 +541,13 @@ function showCode(r) {
     <h3>💻 ${esc(r.code_title)} <span class="meta">(${esc(r.code_lang)})</span></h3>
     ${isHtml ? '<iframe class="preview" sandbox="allow-scripts allow-forms allow-modals"></iframe>' : ""}
     <pre><code></code></pre>
-    <div class="row"><button class="primary copy">📋 Copy code</button><button class="ghost dl">⬇ Download</button></div>
+    <div class="row"><button class="primary copy">${esc(tr("copyCode"))}</button><button class="ghost dl">${esc(tr("download"))}</button></div>
   </div>`);
   box.querySelector("code").textContent = r.code;
   if (isHtml) box.querySelector("iframe").srcdoc = r.code;
   box.querySelector(".copy").onclick = async (e) => {
     e.stopPropagation();
-    try { await navigator.clipboard.writeText(r.code); toast("Copied ✔"); } catch { toast("Copy blocked by the browser"); }
+    try { await navigator.clipboard.writeText(r.code); toast(tr("copied")); } catch { toast(tr("copyBlocked")); }
   };
   box.querySelector(".dl").onclick = (e) => {
     e.stopPropagation();
@@ -561,7 +572,7 @@ async function keepAwake() { // Night mode: stop the screen from sleeping while 
     if ("wakeLock" in navigator && !wakeLock && state.scheduled.length) {
       wakeLock = await navigator.wakeLock.request("screen");
       wakeLock.addEventListener("release", () => (wakeLock = null));
-      toast("🌙 Night mode on: screen stays awake for scheduled messages");
+      toast(tr("nightOn"));
     }
   } catch { /* battery saver can refuse; the timer still works while the screen is on */ }
 }
@@ -578,11 +589,6 @@ function fireScheduled() {
 setInterval(fireScheduled, 1000);
 
 // At the scheduled time Partner asks "Ha ke na?". Ha -> send. Na -> delete it and go back to Partner's home screen.
-const ASK_SEND = {
-  "gu-IN": (who) => `સમય થઈ ગયો. ${who} ને આ મેસેજ મોકલું? હા કે ના?`,
-  "hi-IN": (who) => `समय हो गया। ${who} को यह मैसेज भेजूँ? हाँ या ना?`,
-  "en-IN": (who) => `It's time. Shall I send this message to ${who}? Yes or no?`,
-};
 const askQueue = [];
 function askScheduled(s) {
   askQueue.push(s);
@@ -593,15 +599,16 @@ function showNextAsk() {
   if (!s) return;
   const who = label(contactById(s.contact_id)) || s.phone;
   vibrate([600, 200, 600, 200, 600]);
+  notify(tr("scheduledTitle"), `${who}: ${s.text}`);
   goHome();
   $("reply").textContent = "⏰ " + s.text;
   const box = el(`<div class="card"><h3>⏰ ${esc(who)}</h3><p style="white-space:pre-wrap">${esc(s.text)}</p>
-    <div class="row"><button class="big yes">✔ હા / Yes – send</button><button class="big alt no">✖ ના / No – delete</button></div></div>`);
+    <div class="row"><button class="big yes">${esc(tr("yesSend"))}</button><button class="big alt no">${esc(tr("noDelete"))}</button></div></div>`);
   box.querySelector(".yes").onclick = (e) => { e.stopPropagation(); handleUtterance("yes"); };
   box.querySelector(".no").onclick = (e) => { e.stopPropagation(); handleUtterance("no"); };
   $("card").appendChild(box);
   state.pending = { kind: "scheduled", s, who };
-  speak(t(ASK_SEND)(who), state.lang).then(() => listen());
+  speak(tr("askSend", { who }), state.lang).then(() => listen());
 }
 function finishAsk() { askQueue.shift(); setTimeout(showNextAsk, 1500); }
 
@@ -623,14 +630,14 @@ function birthdayCheck() {
   const today = state.contacts.filter((c) => isOn(c.birthday, new Date()));
   const tmrw = state.contacts.filter((c) => isOn(c.birthday, tomorrow) && !state.scheduled.some((s) => s.contact_id === c.id));
   if (!today.length && !tmrw.length) return;
-  const box = el(`<div class="card"><h3>🎂 Birthdays</h3><div class="options"></div></div>`);
+  const box = el(`<div class="card"><h3>${esc(tr("birthdays"))}</h3><div class="options"></div></div>`);
   const add = (text, ask) => {
     const b = el(`<button class="big alt">${esc(text)}</button>`);
     b.onclick = (e) => { e.stopPropagation(); handleUtterance(ask); };
     box.querySelector(".options").appendChild(b);
   };
-  today.forEach((c) => add(`🎉 Today: ${label(c)} – send wish now`, `${c.name} ${c.relation} (${c.city}) no aaje birthday che, ene WhatsApp par saras birthday wish moklo`));
-  tmrw.forEach((c) => add(`⏰ Tomorrow: ${label(c)} – wish at 12:00 AM`, `Kale ${c.name} ${c.relation} (${c.city}) no birthday che, raat na 12 vage WhatsApp par birthday wish moklje`));
+  today.forEach((c) => add(tr("bdayToday", { who: label(c) }), tr("bdayAskToday", { who: label(c) })));
+  tmrw.forEach((c) => add(tr("bdayTomorrow", { who: label(c) }), tr("bdayAskTomorrow", { who: label(c) })));
   $("card").appendChild(box);
 }
 
@@ -651,6 +658,7 @@ setInterval(() => {
   save("bolo.reminders", state.reminders);
   due.forEach((r) => {
     vibrate([500, 200, 500, 200, 500]);
+    notify(tr("reminderTitle"), r.text);
     $("reply").textContent = "⏰ " + r.text;
     speak("⏰ " + r.text, r.lang);
   });
@@ -676,14 +684,14 @@ function renderFamily() {
   });
   $("memoryList").innerHTML = state.memory.length ? "" : "<li>—</li>";
   state.memory.forEach((m, i) => {
-    const li = el(`<li>${esc(m)} <button title="Delete">✖</button></li>`);
+    const li = el(`<li>${esc(m)} <button title="${esc(tr("deleteTitle"))}">✖</button></li>`);
     li.querySelector("button").onclick = () => { state.memory.splice(i, 1); save("bolo.memory", state.memory); renderFamily(); };
     $("memoryList").appendChild(li);
   });
   $("verifyMode").value = state.verification;
   $("scheduledList").innerHTML = state.scheduled.length ? "" : "<li>—</li>";
   state.scheduled.forEach((sc) => {
-    const li = el(`<li>${new Date(sc.at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })} → ${esc(label(contactById(sc.contact_id)) || sc.phone)}: ${esc(sc.text)} <button title="Cancel">✖</button></li>`);
+    const li = el(`<li>${new Date(sc.at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })} → ${esc(label(contactById(sc.contact_id)) || sc.phone)}: ${esc(sc.text)} <button title="${esc(tr("cancelTitle"))}">✖</button></li>`);
     li.querySelector("button").onclick = () => { state.scheduled = state.scheduled.filter((x) => x.id !== sc.id); save("bolo.scheduled", state.scheduled); renderFamily(); };
     $("scheduledList").appendChild(li);
   });
@@ -720,7 +728,7 @@ const RELATION_FROM_NAME = [
 ];
 $("importPhone").onclick = async () => {
   if (!("contacts" in navigator && "select" in navigator.contacts)) {
-    toast("Open Partner in Chrome on an Android phone to import contacts. You can also add them below.");
+    toast(tr("importNeedsChrome"));
     return;
   }
   try {
@@ -738,8 +746,8 @@ $("importPhone").onclick = async () => {
     }
     save("bolo.contacts", state.contacts);
     renderFamily();
-    toast(`📱 Added ${added} contact(s). Edit to add relation / city.`);
-  } catch { toast("Contact import was cancelled."); }
+    toast(tr("imported", { n: added }));
+  } catch { toast(tr("importCancelled")); }
 };
 $("resetDemo").onclick = () => { state.contacts = structuredClone(DEMO_CONTACTS); save("bolo.contacts", state.contacts); renderFamily(); };
 
@@ -756,16 +764,87 @@ $("readGo").onclick = () => {
   state.sharedText = $("readText").value.trim();
   $("readBox").classList.add("hidden");
   if (!state.sharedText) return;
-  const ask = { "gu-IN": "આ મેસેજ વાંચી સંભળાવ અને સમજાવ. ફ્રોડ તો નથી ને?", "hi-IN": "यह मैसेज पढ़कर सुनाओ और समझाओ। कहीं फ्रॉड तो नहीं?" };
-  handleUtterance(ask[state.lang] || "Read this message to me, explain it simply, and tell me if it is a fraud.");
+  handleUtterance(tr("askRead"));
 };
 
 // ---------- SOS button ----------
 $("btnSos").onclick = (e) => {
   e.stopPropagation();
-  const ask = { "gu-IN": "મદદ! ઇમરજન્સી છે", "hi-IN": "मदद! इमरजेंसी है" };
-  handleUtterance(ask[state.lang] || "Help! This is an emergency.");
+  handleUtterance(tr("askSos"));
 };
+
+// ---------- first-run setup: language + permissions ----------
+async function notify(title, body) { // a phone notification, also when Partner is in the background
+  try {
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+    const reg = "serviceWorker" in navigator && (await navigator.serviceWorker.getRegistration());
+    if (reg) reg.showNotification(title, { body, icon: "icons/icon-192.png", badge: "icons/icon-192.png", vibrate: [300, 100, 300] });
+    else new Notification(title, { body, icon: "icons/icon-192.png" });
+  } catch { /* notifications not available */ }
+}
+let installPrompt = null;
+window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installPrompt = e; renderSetup(); });
+window.addEventListener("appinstalled", () => { installPrompt = null; save("bolo.installed", true); renderSetup(); });
+
+function markPerm(id, status) { // status: "ok" | "no" | ""
+  const row = $(id), btn = row.querySelector("button");
+  row.classList.toggle("ok", status === "ok");
+  row.classList.toggle("no", status === "no");
+  const isInstall = id === "permInstall";
+  btn.textContent = status === "ok" ? tr(isInstall ? "installed" : "allowed") : status === "no" ? tr("denied") : tr(isInstall ? "install" : "allow");
+}
+async function permState(name) {
+  try { return (await navigator.permissions.query({ name })).state; } catch { return "prompt"; }
+}
+async function renderSetup() {
+  if ($("setup").classList.contains("hidden")) return;
+  document.querySelectorAll("[data-setlang]").forEach((b) => b.classList.toggle("on", b.dataset.setlang === state.lang));
+  const mic = await permState("microphone");
+  markPerm("permMic", mic === "granted" ? "ok" : mic === "denied" ? "no" : "");
+  const n = "Notification" in window ? Notification.permission : "denied";
+  markPerm("permNotif", n === "granted" ? "ok" : n === "denied" ? "no" : "");
+  markPerm("permContacts", state.contacts.some((c) => !DEMO_CONTACTS.some((d) => d.id === c.id)) ? "ok" : "");
+  const geo = await permState("geolocation");
+  markPerm("permLocation", geo === "granted" ? "ok" : geo === "denied" ? "no" : "");
+  const standalone = matchMedia("(display-mode: standalone)").matches || load("bolo.installed", false);
+  markPerm("permInstall", standalone ? "ok" : "");
+}
+function openSetup() { $("family").classList.add("hidden"); $("setup").classList.remove("hidden"); renderSetup(); }
+
+$("permMic").querySelector("button").onclick = async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach((tk) => tk.stop());
+    if (Recognition && !handsFree) { handsFree = true; save("bolo.handsfree", true); renderHandsFree(); } // always listening for "Partner"
+  } catch { toast(tr("blockedHelp")); }
+  renderSetup();
+};
+$("permNotif").querySelector("button").onclick = async () => {
+  if (!("Notification" in window)) { toast(tr("blockedHelp")); return; }
+  const r = await Notification.requestPermission();
+  if (r === "granted") notify(tr("reminderTitle"), tr("allowed")); else if (r === "denied") toast(tr("blockedHelp"));
+  renderSetup();
+};
+$("permContacts").querySelector("button").onclick = async () => {
+  if ("contacts" in navigator && "select" in navigator.contacts) { await $("importPhone").onclick(); renderSetup(); }
+  else { $("setup").classList.add("hidden"); renderFamily(); $("family").classList.remove("hidden"); toast(tr("importNeedsChrome")); }
+};
+$("permLocation").querySelector("button").onclick = () => {
+  if (!navigator.geolocation) { toast(tr("blockedHelp")); return; }
+  navigator.geolocation.getCurrentPosition(() => renderSetup(), () => { toast(tr("blockedHelp")); renderSetup(); }, { timeout: 10000 });
+};
+$("permInstall").querySelector("button").onclick = async () => {
+  if (installPrompt) { installPrompt.prompt(); const c = await installPrompt.userChoice; if (c.outcome === "accepted") save("bolo.installed", true); installPrompt = null; }
+  else toast(tr("installHelp"));
+  renderSetup();
+};
+document.querySelectorAll("[data-setlang]").forEach((b) => (b.onclick = async () => { await setLanguage(b.dataset.setlang); renderSetup(); }));
+$("setupDone").onclick = () => {
+  save("bolo.setupDone", true);
+  $("setup").classList.add("hidden");
+  if (handsFree) { startHandsFree(); speak(tr("hfHint"), state.lang); }
+};
+$("openSetup").onclick = openSetup;
 
 // ---------- wiring ----------
 $("stage").addEventListener("click", (e) => {
@@ -778,11 +857,11 @@ $("typeForm").onsubmit = (e) => {
   if (v) { $("typeInput").value = ""; handleUtterance(v); }
 };
 document.querySelectorAll("#langs .chip[data-lang]").forEach((b) => (b.onclick = (e) => {
-  e.stopPropagation(); state.lang = b.dataset.lang; save("bolo.lang", state.lang); renderLang(); restartHandsFree();
+  e.stopPropagation(); setLanguage(b.dataset.lang);
 }));
 function restartHandsFree() { if (handsFree) { stopHandsFree(); setTimeout(startHandsFree, 300); } renderHandsFree(); }
 $("moreLangs").onchange = (e) => {
-  if (e.target.value) { state.lang = e.target.value; save("bolo.lang", state.lang); renderLang(); restartHandsFree(); }
+  if (e.target.value) setLanguage(e.target.value);
 };
 document.addEventListener("keydown", (e) => { // PC: press Space to talk
   if (e.code === "Space" && document.activeElement === document.body) { e.preventDefault(); listen(); }
@@ -793,11 +872,16 @@ renderHandsFree();
 startHandsFree();
 setMode("idle");
 // Live status pill: which AI brain is answering.
-fetch("/api/status").then((r) => r.json()).then((d) => {
-  $("statusText").textContent = d.provider ? `Online · ${d.provider}` : "No AI key";
-  $("status").classList.toggle("off", !d.provider);
-}).catch(() => { $("statusText").textContent = "Offline"; $("status").classList.add("off"); });
-birthdayCheck();
+fetch("/api/status").then((r) => r.json()).then((d) => { statusProvider = d.provider || ""; showStatus(); })
+  .catch(() => { statusProvider = undefined; showStatus(); });
+setLanguage(state.lang).then(() => {
+  birthdayCheck();
+  if (!load("bolo.setupDone", false)) openSetup(); // first visit: language + permissions, like a normal app
+  const q = new URLSearchParams(location.search); // long-press shortcuts on the app icon
+  if (q.get("sos") === "1") $("btnSos").click();
+  else if (q.get("talk") === "1") listen();
+});
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 keepAwake();
 
 // Direct link to the family screen: open Partner with #family
